@@ -1,12 +1,21 @@
-# What is this?
-It's 1996; Quake II is deep in development. They come to the realization that QC is quite limited and slow, and they consider moving to a native binary library to handle their game mods... except, they don't. They instead decide to improve QC and continue to build their next big game using QC as the game code handler.
+This is a Quake II game DLL that loads "game.wasm" compiled WebAssembly data. It can also load AoT-compiled wasm, using the wamrc from https://github.com/bytecodealliance/wasm-micro-runtime
 
-That's the alternate reality I have constructed here. An alternate reality where Carmack & Co have switched to C++20 (somehow). Take a peek into a dimension full of VMs!
+You'll need to set up a build of WAMR to be able to compile this.
 
-# Oh.. but why?
-This started as a joke in the Quake Mapping & Quake Legacy Discords. I had an idea to construct a VM inside of a Q2 game DLL and natively load Quake 1 progs.dat's to be able to run Quake 1 mods inside of Quake 2. Sadly that idea never made it beyond initial testing (although it might still be mostly possible!!), but I then decided to simply convert Quake 2's code to QC and load that instead.
+# Compiling Game WASMs
+To compile a Quake II game DLL source repo into the .wasm format, you will need, at the very least, clang (I believe llvm 11.0 is minimum requirement here) and `wasi-sysroot` from  https://github.com/WebAssembly/wasi-sdk/releases (+ the lib tarball, as that will be required for linking the builtins).
 
-Those more familiar with QC can jump on in and create mods for Quake II without needing to touch any C code at all.
+Then, it is as simple as running the following command:
 
-# I wanna make a progs - how do?
-See the https://github.com/Paril/quake2c-progs repo for the actual progs source - this is just the game DLL!
+`clang -mbulk-memory --target=wasm32-wasi --sysroot=wasi-sysroot -Wl,--no-entry -I./src -o "./game.wasm" src/*.c wasm.c`
+
+where `src` is the folder that contains the mod source you're trying to compile. You must also either copy `wasm.c` and `api.h` from this repo (in the game subfolder) to your game source, or include it in the command line like I do for mine.
+
+This will do a 'debug' build of the source. Including `-Os` will enable optimizations.
+
+The interpreter is pretty fast; in my tests, it is much faster than QuakeC's interpreter.
+
+AoT is also supported. If "game.aot" is found in the folder, it will attempt to load that instead. To compile an AoT file, you'll need `wamrc.exe` from WASM Micro Runtime.
+`wamrc --enable-bulk-memory --target=i386 -o game.aot game.wasm`
+
+The AoT-compiled code is much, much faster. I've yet to get JIT stable enough to test, but it bloats the DLL size too much for it to be something to seriously consider at the moment.
