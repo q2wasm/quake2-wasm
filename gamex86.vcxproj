@@ -1,0 +1,440 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="KMQuake2 Debug|Win32">
+      <Configuration>KMQuake2 Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="KMQuake2 Debug|x64">
+      <Configuration>KMQuake2 Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="KMQuake2 Release|Win32">
+      <Configuration>KMQuake2 Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="KMQuake2 Release|x64">
+      <Configuration>KMQuake2 Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Vanilla Debug|Win32">
+      <Configuration>Vanilla Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Vanilla Debug|x64">
+      <Configuration>Vanilla Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Vanilla Release|Win32">
+      <Configuration>Vanilla Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Vanilla Release|x64">
+      <Configuration>Vanilla Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <VCProjectVersion>15.0</VCProjectVersion>
+    <ProjectGuid>{D86BA707-9BEF-408E-90A1-2985B50FB996}</ProjectGuid>
+    <RootNamespace>gamex86</RootNamespace>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+    <ProjectName>gamex</ProjectName>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Vanilla Debug|Win32'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v142</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Vanilla Debug|x64'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v142</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='KMQuake2 Debug|Win32'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v142</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='KMQuake2 Debug|x64'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v142</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Vanilla Release|Win32'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v142</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Vanilla Release|x64'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v142</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='KMQuake2 Release|Win32'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v142</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='KMQuake2 Release|x64'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v142</PlatformToolset>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="Shared">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Vanilla Debug|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Vanilla Debug|x64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='KMQuake2 Debug|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='KMQuake2 Debug|x64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Vanilla Release|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Vanilla Release|x64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='KMQuake2 Release|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='KMQuake2 Release|x64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Vanilla Debug|Win32'">
+    <OutDir>$(SolutionDir)..\</OutDir>
+    <CodeAnalysisRuleSet>MixedMinimumRules.ruleset</CodeAnalysisRuleSet>
+    <IncludePath>./;windows/;../wasm-micro-runtime/core/iwasm/include/;$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
+    <TargetName>$(ProjectName)86</TargetName>
+    <IntDir>obj\$(Configuration)\</IntDir>
+    <LibraryPath>../wasm-micro-runtime/product-mini/platforms/windows/build/Debug/;$(VC_LibraryPath_x86);$(WindowsSDK_LibraryPath_x86)</LibraryPath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Vanilla Debug|x64'">
+    <CodeAnalysisRuleSet>MixedMinimumRules.ruleset</CodeAnalysisRuleSet>
+    <IncludePath>./;windows/;../wasm-micro-runtime/core/iwasm/include/;$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
+    <TargetName>$(ProjectName)86_x64</TargetName>
+    <OutDir>$(SolutionDir)..\</OutDir>
+    <IntDir>obj\$(Platform)\$(Configuration)\</IntDir>
+    <LibraryPath>../wasm-micro-runtime/product-mini/platforms/windows/build/Debug/;$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64)</LibraryPath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='KMQuake2 Debug|Win32'">
+    <OutDir>$(SolutionDir)..\</OutDir>
+    <CodeAnalysisRuleSet>MixedMinimumRules.ruleset</CodeAnalysisRuleSet>
+    <IncludePath>./;windows/;../wasm-micro-runtime/core/iwasm/include/;$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
+    <TargetName>kmq2$(ProjectName)86</TargetName>
+    <IntDir>obj\$(Configuration)\</IntDir>
+    <LibraryPath>../wasm-micro-runtime/product-mini/platforms/windows/build/Release/;$(VC_LibraryPath_x86);$(WindowsSDK_LibraryPath_x86)</LibraryPath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='KMQuake2 Debug|x64'">
+    <CodeAnalysisRuleSet>MixedMinimumRules.ruleset</CodeAnalysisRuleSet>
+    <IncludePath>./;windows/;../wasm-micro-runtime/core/iwasm/include/;$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
+    <TargetName>kmq2$(ProjectName)64</TargetName>
+    <OutDir>$(SolutionDir)..\</OutDir>
+    <IntDir>obj\$(Platform)\$(Configuration)\</IntDir>
+    <LibraryPath>../wasm-micro-runtime/product-mini/platforms/windows/build/Release/;$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64)</LibraryPath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Vanilla Release|Win32'">
+    <OutDir>$(SolutionDir)..\</OutDir>
+    <CodeAnalysisRuleSet>MixedMinimumRules.ruleset</CodeAnalysisRuleSet>
+    <IncludePath>./;windows/;../wasm-micro-runtime/core/iwasm/include/;$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
+    <TargetName>$(ProjectName)86</TargetName>
+    <IntDir>obj\$(Configuration)\</IntDir>
+    <LibraryPath>../wasm-micro-runtime/product-mini/platforms/windows/build/Release/;$(VC_LibraryPath_x86);$(WindowsSDK_LibraryPath_x86)</LibraryPath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Vanilla Release|x64'">
+    <CodeAnalysisRuleSet>MixedMinimumRules.ruleset</CodeAnalysisRuleSet>
+    <IncludePath>./;windows/;../wasm-micro-runtime/core/iwasm/include/;$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
+    <TargetName>$(ProjectName)86_x64</TargetName>
+    <OutDir>$(SolutionDir)..\</OutDir>
+    <IntDir>obj\$(Platform)\$(Configuration)\</IntDir>
+    <LibraryPath>../wasm-micro-runtime/product-mini/platforms/windows/build/Release/;$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64)</LibraryPath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='KMQuake2 Release|Win32'">
+    <OutDir>$(SolutionDir)..\</OutDir>
+    <CodeAnalysisRuleSet>MixedMinimumRules.ruleset</CodeAnalysisRuleSet>
+    <IncludePath>./;windows/;../wasm-micro-runtime/core/iwasm/include/;$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
+    <TargetName>kmq2$(ProjectName)86</TargetName>
+    <IntDir>obj\$(Configuration)\</IntDir>
+    <LibraryPath>../wasm-micro-runtime/product-mini/platforms/windows/build/Release/;$(VC_LibraryPath_x86);$(WindowsSDK_LibraryPath_x86)</LibraryPath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='KMQuake2 Release|x64'">
+    <CodeAnalysisRuleSet>MixedMinimumRules.ruleset</CodeAnalysisRuleSet>
+    <IncludePath>./;windows/;../wasm-micro-runtime/core/iwasm/include/;$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
+    <TargetName>kmq2$(ProjectName)64</TargetName>
+    <OutDir>$(SolutionDir)..\</OutDir>
+    <IntDir>obj\$(Platform)\$(Configuration)\</IntDir>
+    <LibraryPath>../wasm-micro-runtime/product-mini/platforms/windows/build/Release/;$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64)</LibraryPath>
+  </PropertyGroup>
+  <PropertyGroup Label="Vcpkg" Condition="'$(Configuration)|$(Platform)'=='KMQuake2 Debug|Win32'">
+    <VcpkgEnabled>false</VcpkgEnabled>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='KMQuake2 Debug|x64'" Label="Vcpkg">
+    <VcpkgEnabled>false</VcpkgEnabled>
+  </PropertyGroup>
+  <PropertyGroup Label="Vcpkg" Condition="'$(Configuration)|$(Platform)'=='KMQuake2 Release|Win32'">
+    <VcpkgEnabled>false</VcpkgEnabled>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='KMQuake2 Release|x64'" Label="Vcpkg">
+    <VcpkgEnabled>false</VcpkgEnabled>
+  </PropertyGroup>
+  <PropertyGroup Label="Vcpkg" Condition="'$(Configuration)|$(Platform)'=='Vanilla Debug|Win32'">
+    <VcpkgEnabled>false</VcpkgEnabled>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Vanilla Debug|x64'" Label="Vcpkg">
+    <VcpkgEnabled>false</VcpkgEnabled>
+  </PropertyGroup>
+  <PropertyGroup Label="Vcpkg" Condition="'$(Configuration)|$(Platform)'=='Vanilla Release|Win32'">
+    <VcpkgEnabled>false</VcpkgEnabled>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Vanilla Release|x64'" Label="Vcpkg">
+    <VcpkgEnabled>false</VcpkgEnabled>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Vanilla Debug|Win32'">
+    <ClCompile>
+      <WarningLevel>Level4</WarningLevel>
+      <Optimization>Disabled</Optimization>
+      <PreprocessorDefinitions>_USE_MATH_DEFINES;_CRT_NONSTDC_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <MinimalRebuild>false</MinimalRebuild>
+      <DiagnosticsFormat>Caret</DiagnosticsFormat>
+      <ErrorReporting>Send</ErrorReporting>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <LanguageStandard>stdcpplatest</LanguageStandard>
+      <AdditionalOptions>
+      </AdditionalOptions>
+      <ExceptionHandling>false</ExceptionHandling>
+      <LanguageStandard_C>stdc17</LanguageStandard_C>
+      <DisableSpecificWarnings>4577;4100</DisableSpecificWarnings>
+    </ClCompile>
+    <Link>
+      <ModuleDefinitionFile>game.def</ModuleDefinitionFile>
+      <GenerateDebugInformation>DebugFull</GenerateDebugInformation>
+      <AdditionalDependencies>vmlib.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Vanilla Debug|x64'">
+    <ClCompile>
+      <WarningLevel>Level4</WarningLevel>
+      <Optimization>Disabled</Optimization>
+      <PreprocessorDefinitions>_USE_MATH_DEFINES;_CRT_NONSTDC_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <MinimalRebuild>false</MinimalRebuild>
+      <DiagnosticsFormat>Caret</DiagnosticsFormat>
+      <ErrorReporting>Send</ErrorReporting>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <LanguageStandard>stdcpplatest</LanguageStandard>
+      <AdditionalOptions>
+      </AdditionalOptions>
+      <ExceptionHandling>false</ExceptionHandling>
+      <LanguageStandard_C>stdc17</LanguageStandard_C>
+      <DisableSpecificWarnings>4577;4100</DisableSpecificWarnings>
+    </ClCompile>
+    <Link>
+      <ModuleDefinitionFile>game.def</ModuleDefinitionFile>
+      <GenerateDebugInformation>DebugFull</GenerateDebugInformation>
+      <AdditionalDependencies>vmlib.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='KMQuake2 Debug|Win32'">
+    <ClCompile>
+      <WarningLevel>Level4</WarningLevel>
+      <Optimization>Disabled</Optimization>
+      <PreprocessorDefinitions>KMQUAKE2_ENGINE_MOD;_USE_MATH_DEFINES;_CRT_NONSTDC_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <MinimalRebuild>false</MinimalRebuild>
+      <DiagnosticsFormat>Caret</DiagnosticsFormat>
+      <ErrorReporting>Send</ErrorReporting>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <LanguageStandard>stdcpplatest</LanguageStandard>
+      <AdditionalOptions>
+      </AdditionalOptions>
+      <ExceptionHandling>false</ExceptionHandling>
+      <LanguageStandard_C>stdc17</LanguageStandard_C>
+      <DisableSpecificWarnings>4577;4100</DisableSpecificWarnings>
+    </ClCompile>
+    <Link>
+      <ModuleDefinitionFile>game.def</ModuleDefinitionFile>
+      <GenerateDebugInformation>DebugFull</GenerateDebugInformation>
+      <AdditionalDependencies>vmlib.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='KMQuake2 Debug|x64'">
+    <ClCompile>
+      <WarningLevel>Level4</WarningLevel>
+      <Optimization>Disabled</Optimization>
+      <PreprocessorDefinitions>KMQUAKE2_ENGINE_MOD;_USE_MATH_DEFINES;_CRT_NONSTDC_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <MinimalRebuild>false</MinimalRebuild>
+      <DiagnosticsFormat>Caret</DiagnosticsFormat>
+      <ErrorReporting>Send</ErrorReporting>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <LanguageStandard>stdcpplatest</LanguageStandard>
+      <AdditionalOptions>
+      </AdditionalOptions>
+      <ExceptionHandling>false</ExceptionHandling>
+      <LanguageStandard_C>stdc17</LanguageStandard_C>
+      <DisableSpecificWarnings>4577;4100</DisableSpecificWarnings>
+    </ClCompile>
+    <Link>
+      <ModuleDefinitionFile>game.def</ModuleDefinitionFile>
+      <GenerateDebugInformation>DebugFull</GenerateDebugInformation>
+      <AdditionalDependencies>vmlib.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Vanilla Release|Win32'">
+    <ClCompile>
+      <WarningLevel>Level4</WarningLevel>
+      <Optimization>MaxSpeed</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <PreprocessorDefinitions>_USE_MATH_DEFINES;_CRT_NONSTDC_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <DiagnosticsFormat>Caret</DiagnosticsFormat>
+      <ErrorReporting>Send</ErrorReporting>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <LanguageStandard>stdcpplatest</LanguageStandard>
+      <AdditionalOptions>
+      </AdditionalOptions>
+      <ExceptionHandling>Sync</ExceptionHandling>
+      <LanguageStandard_C>stdc17</LanguageStandard_C>
+      <DisableSpecificWarnings>4577;4100</DisableSpecificWarnings>
+    </ClCompile>
+    <Link>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <ModuleDefinitionFile>game.def</ModuleDefinitionFile>
+      <AdditionalDependencies>vmlib.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers>
+      <GenerateDebugInformation>DebugFull</GenerateDebugInformation>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Vanilla Release|x64'">
+    <ClCompile>
+      <WarningLevel>Level4</WarningLevel>
+      <Optimization>MaxSpeed</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <PreprocessorDefinitions>_USE_MATH_DEFINES;_CRT_NONSTDC_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <DiagnosticsFormat>Caret</DiagnosticsFormat>
+      <ErrorReporting>Send</ErrorReporting>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <LanguageStandard>stdcpplatest</LanguageStandard>
+      <AdditionalOptions>
+      </AdditionalOptions>
+      <ExceptionHandling>false</ExceptionHandling>
+      <LanguageStandard_C>stdc17</LanguageStandard_C>
+      <DisableSpecificWarnings>4577;4100</DisableSpecificWarnings>
+    </ClCompile>
+    <Link>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <ModuleDefinitionFile>game.def</ModuleDefinitionFile>
+      <AdditionalDependencies>vmlib.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='KMQuake2 Release|Win32'">
+    <ClCompile>
+      <WarningLevel>Level4</WarningLevel>
+      <Optimization>MaxSpeed</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <PreprocessorDefinitions>KMQUAKE2_ENGINE_MOD;_USE_MATH_DEFINES;_CRT_NONSTDC_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <DiagnosticsFormat>Caret</DiagnosticsFormat>
+      <ErrorReporting>Send</ErrorReporting>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <LanguageStandard>stdcpplatest</LanguageStandard>
+      <AdditionalOptions>
+      </AdditionalOptions>
+      <ExceptionHandling>false</ExceptionHandling>
+      <LanguageStandard_C>stdc17</LanguageStandard_C>
+      <DisableSpecificWarnings>4577;4100</DisableSpecificWarnings>
+    </ClCompile>
+    <Link>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <ModuleDefinitionFile>game.def</ModuleDefinitionFile>
+      <AdditionalDependencies>vmlib.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='KMQuake2 Release|x64'">
+    <ClCompile>
+      <WarningLevel>Level4</WarningLevel>
+      <Optimization>MaxSpeed</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <PreprocessorDefinitions>KMQUAKE2_ENGINE_MOD;_USE_MATH_DEFINES;_CRT_NONSTDC_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <DiagnosticsFormat>Caret</DiagnosticsFormat>
+      <ErrorReporting>Send</ErrorReporting>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <LanguageStandard>stdcpplatest</LanguageStandard>
+      <AdditionalOptions>
+      </AdditionalOptions>
+      <ExceptionHandling>false</ExceptionHandling>
+      <LanguageStandard_C>stdc17</LanguageStandard_C>
+      <DisableSpecificWarnings>4577;4100</DisableSpecificWarnings>
+    </ClCompile>
+    <Link>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <ModuleDefinitionFile>game.def</ModuleDefinitionFile>
+      <AdditionalDependencies>vmlib.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <None Include="game.def" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="g_main.cpp" />
+    <ClCompile Include="g_save.c" />
+    <ClCompile Include="g_wasm_api.cpp" />
+    <ClCompile Include="g_wasm_wasi.cpp" />
+    <ClCompile Include="shared\shared.c" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="g_main.h" />
+    <ClInclude Include="g_save.h" />
+    <ClInclude Include="g_wasm.h" />
+    <ClInclude Include="g_wasm.hh" />
+    <ClInclude Include="shared\client.h" />
+    <ClInclude Include="shared\entity.h" />
+    <ClInclude Include="shared\api.h" />
+    <ClInclude Include="shared\platform.h" />
+    <ClInclude Include="shared\shared.h" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

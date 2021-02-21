@@ -1,0 +1,63 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <None Include="game.def" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="src">
+      <UniqueIdentifier>{2b4115b2-12de-4fe1-8346-227ef381fc8d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="inc">
+      <UniqueIdentifier>{e1810386-02c0-4fff-8105-8a6b8bdd92a7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="inc\shared">
+      <UniqueIdentifier>{6f2022d4-528a-4247-8843-58553860cf6f}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="shared\shared.c">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="g_save.c">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="g_main.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="g_wasm_api.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="g_wasm_wasi.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="shared\client.h">
+      <Filter>inc\shared</Filter>
+    </ClInclude>
+    <ClInclude Include="shared\entity.h">
+      <Filter>inc\shared</Filter>
+    </ClInclude>
+    <ClInclude Include="shared\api.h">
+      <Filter>inc\shared</Filter>
+    </ClInclude>
+    <ClInclude Include="shared\platform.h">
+      <Filter>inc\shared</Filter>
+    </ClInclude>
+    <ClInclude Include="shared\shared.h">
+      <Filter>inc\shared</Filter>
+    </ClInclude>
+    <ClInclude Include="g_save.h">
+      <Filter>inc</Filter>
+    </ClInclude>
+    <ClInclude Include="g_main.h">
+      <Filter>inc</Filter>
+    </ClInclude>
+    <ClInclude Include="g_wasm.h">
+      <Filter>inc</Filter>
+    </ClInclude>
+    <ClInclude Include="g_wasm.hh">
+      <Filter>inc</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>
