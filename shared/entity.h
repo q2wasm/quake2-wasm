@@ -1,5 +1,7 @@
 #pragma once
 
+#include "../game/api.h"
+
 typedef uint32_t entity_effects_t;
 
 typedef uint32_t render_effects_t;

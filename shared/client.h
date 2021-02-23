@@ -18,6 +18,8 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 #pragma once
 
+#include "../game/api.h"
+
 // player_state_t->refdef flags
 typedef enum
 {
@@ -66,53 +68,51 @@ typedef int16_t player_stat_t;
 
 // player_state_t is the information needed in addition to pmove_state_t
 // to rendered a view.  There will only be 10 player_state_t sent each second,
-// but the number of pmove_state_t changes will be reletive to client
+// but the number of pmove_state_t changes will be relative to client
 // frame rates
 typedef struct
 {
-	pmove_state_t   pmove;      // for prediction
+	pmove_state_t	pmove;      // for prediction
 
 	// these fields do not need to be communicated bit-precise
 
-	vec3_t      viewangles;     // for fixed views
-	vec3_t      viewoffset;     // add to pmovestate->origin
-	vec3_t      kick_angles;    // add to view direction to get render angles
+	vec3_t	viewangles;     // for fixed views
+	vec3_t	viewoffset;     // add to pmovestate->origin
+	vec3_t	kick_angles;    // add to view direction to get render angles
 								// set by weapon kicks, pain effects, etc
 
-	vec3_t      gunangles;
-	vec3_t      gunoffset;
-	int         gunindex;
-	int         gunframe;
+	vec3_t	gunangles;
+	vec3_t	gunoffset;
+	int32_t	gunindex;
+	int32_t	gunframe;
 
 #ifdef KMQUAKE2_ENGINE_MOD //Knightmare added
-	int			gunskin;		// for animated weapon skins
-	int			gunindex2;		// for a second weapon model (boot)
-	int			gunframe2;
-	int			gunskin2;
+	int32_t	gunskin;		// for animated weapon skins
+	int32_t	gunindex2;		// for a second weapon model (boot)
+	int32_t	gunframe2;
+	int32_t	gunskin2;
 
 	// server-side speed control!
-	int			maxspeed;
-	int			duckspeed;
-	int			waterspeed;
-	int			accel;
-	int			stopspeed;
+	int32_t	maxspeed;
+	int32_t	duckspeed;
+	int32_t	waterspeed;
+	int32_t	accel;
+	int32_t	stopspeed;
 #endif
 
-	float       blend[4];       // rgba full screen effect
+	vec_t	blend[4];       // rgba full screen effect
 
-	float       fov;            // horizontal field of view
+	vec_t	fov;            // horizontal field of view
 
 	refdef_flags_t	rdflags;        // refdef flags
 
 	player_stat_t	stats[MAX_STATS];       // fast status bar updates
 } player_state_t;
 
-
 struct gclient_s
 {
-	player_state_t	ps;		// communicated by server to clients
-	int				ping;
-
-	// the game dll can add anything it wants after
-	// this point in the structure
+	player_state_t	ps;
+	int32_t			ping;
 };
+
+enum { MAX_INFO_STRING = 512 };

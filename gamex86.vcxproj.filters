@@ -13,14 +13,11 @@
     <Filter Include="inc\shared">
       <UniqueIdentifier>{6f2022d4-528a-4247-8843-58553860cf6f}</UniqueIdentifier>
     </Filter>
+    <Filter Include="inc\game">
+      <UniqueIdentifier>{e0cc0d89-5523-4caf-b863-a4d6ea6e314f}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="shared\shared.c">
-      <Filter>src</Filter>
-    </ClCompile>
-    <ClCompile Include="g_save.c">
-      <Filter>src</Filter>
-    </ClCompile>
     <ClCompile Include="g_main.cpp">
       <Filter>src</Filter>
     </ClCompile>
@@ -30,6 +27,9 @@
     <ClCompile Include="g_wasm_wasi.cpp">
       <Filter>src</Filter>
     </ClCompile>
+    <ClCompile Include="game\wasm.c">
+      <Filter>inc\game</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="shared\client.h">
@@ -37,18 +37,6 @@
     </ClInclude>
     <ClInclude Include="shared\entity.h">
       <Filter>inc\shared</Filter>
-    </ClInclude>
-    <ClInclude Include="shared\api.h">
-      <Filter>inc\shared</Filter>
-    </ClInclude>
-    <ClInclude Include="shared\platform.h">
-      <Filter>inc\shared</Filter>
-    </ClInclude>
-    <ClInclude Include="shared\shared.h">
-      <Filter>inc\shared</Filter>
-    </ClInclude>
-    <ClInclude Include="g_save.h">
-      <Filter>inc</Filter>
     </ClInclude>
     <ClInclude Include="g_main.h">
       <Filter>inc</Filter>
@@ -58,6 +46,9 @@
     </ClInclude>
     <ClInclude Include="g_wasm.hh">
       <Filter>inc</Filter>
+    </ClInclude>
+    <ClInclude Include="game\api.h">
+      <Filter>inc\game</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

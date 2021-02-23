@@ -34,8 +34,6 @@ typedef struct
 	vec_t	x, y, z;
 } vec3_t;
 
-#define BASEDIR	"baseq2"
-
 //
 // game.h -- game dll information visible to server
 //

@@ -20,10 +20,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 extern "C"
 {
-#include "shared/shared.h"
-
 #include "g_main.h"
-#include "g_save.h"
 
 #include <wasm_export.h>
 #include "g_wasm.h"
@@ -320,7 +317,7 @@ static int32_t q2_fd_prestat_get(wasm_exec_env_t, int32_t id, uint8_t *out_buffe
 	if (entry.preopen && entry.type == FILETYPE_DIRECTORY)
 	{
 		BUF_OFFSET(out_buffer, wasi_preopentype_t, 0) = PREOPENTYPE_DIR;
-		BUF_OFFSET(out_buffer, uint32_t, 4) = entry.path.string().size() + 1;
+		BUF_OFFSET(out_buffer, uint32_t, 4) = entry.path.string().size();
 		return ERRNO_SUCCESS;
 	}
 
@@ -336,7 +333,10 @@ static int32_t q2_fd_prestat_dir_name(wasm_exec_env_t, int32_t id, char *path, u
 
 	if (entry.preopen && entry.type == FILETYPE_DIRECTORY)
 	{
-		Q_strlcpy(path, entry.path.string().c_str(), path_len);
+		if (path_len != entry.path.string().size())
+			return ERRNO_BADF;
+
+		strcpy(path, entry.path.string().c_str());
 		return ERRNO_SUCCESS;
 	}
 
@@ -379,14 +379,33 @@ static int32_t q2_path_open(wasm_exec_env_t, int32_t id, int32_t dirflags_i, cha
 
 		fs::path path = entry.path / path_ptr;
 
-		if (!fs::exists(path))
-			return ERRNO_NXIO;
-		else if (!fs::is_regular_file(path))
-			return ERRNO_NOTSUP;
+		if (!(oflags & OFLAGS_CREAT))
+		{
+			if (!fs::exists(path))
+				return ERRNO_NXIO;
+			else if (!fs::is_regular_file(path))
+				return ERRNO_NOTSUP;
+		}
+		
+		if (oflags & OFLAGS_EXCL)
+		{
+			if (fs::exists(path))
+				return ERRNO_EXIST;
+			else if (!fs::is_regular_file(path))
+				return ERRNO_NOTSUP;
+		}
+
+		std::fstream::openmode om = std::fstream::binary | std::fstream::in | std::fstream::out;
+
+		if (oflags & OFLAGS_TRUNC)
+			om |= std::fstream::trunc;
+
+		if (fdflags & FDFLAGS_APPEND)
+			om |= std::fstream::app;
 
 		fds.push_back({
 			.type = FILETYPE_REGULAR_FILE,
-			.stream = std::fstream(path, std::fstream::in | std::fstream::binary)
+			.stream = std::fstream(path, om)
 		});
 
 		*opened_fd_out = fds.size() - 1;
@@ -418,6 +437,36 @@ static int32_t q2_fd_read(wasm_exec_env_t, int32_t id, uint8_t *iovs_ptr, uint32
 
 			entry.stream.read((char *) ptr, len);
 			nread += entry.stream.gcount();
+		}
+
+		*nread_out = nread;
+		return ERRNO_SUCCESS;
+	}
+
+	return ERRNO_BADF;
+}
+
+static int32_t q2_fd_write(wasm_exec_env_t, int32_t id, uint8_t *iovs_ptr, uint32_t iovs_len, uint32_t *nread_out)
+{
+	if (id >= fds.size())
+		return ERRNO_BADF;
+
+	auto &entry = fds[id];
+
+	if (entry.type == FILETYPE_REGULAR_FILE)
+	{
+		uint32_t nread = 0, offset = 0;
+
+		for (uint32_t i = 0; i < iovs_len; i++)
+		{
+			void *ptr = wasm_addr_to_native(BUF_OFFSET(iovs_ptr, uint32_t, offset));
+			offset += 4;
+
+			uint32_t len = BUF_OFFSET(iovs_ptr, uint32_t, offset);
+			offset += 4;
+
+			entry.stream.write((char *) ptr, len);
+			nread += len;
 		}
 
 		*nread_out = nread;
@@ -465,9 +514,9 @@ static NativeSymbol native_symbols_libc_wasi[] = {
 	SYMBOL(fd_fdstat_get, "(i*)i"),
 	/*SYMBOL_F(fd_fdstat_set_flags, NOP, "(ii)i"),
 	SYMBOL_F(fd_fdstat_set_rights, NOP, "(iII)i"),
-	SYMBOL_F(fd_sync, NOP, "(i)i"),
-	SYMBOL_F(fd_write, NOP, "(i*i*)i"),
-	SYMBOL_F(fd_advise, NOP, "(iIIi)i"),
+	SYMBOL_F(fd_sync, NOP, "(i)i"),*/
+	SYMBOL(fd_write, "(i*i*)i"),
+	/*SYMBOL_F(fd_advise, NOP, "(iIIi)i"),
 	SYMBOL_F(fd_allocate, NOP, "(iII)i"),
 	SYMBOL_F(path_create_directory, NOP, "(i*~)i"),
 	SYMBOL_F(path_link, NOP, "(ii*~i*~)i"),*/
@@ -498,7 +547,7 @@ int32_t RegisterWasiNatives()
 	fds.push_back({ .preopen = true });
 	fds.push_back({ .preopen = true });
 	fds.push_back({ .preopen = true });
-	fds.push_back({ .preopen = true, .type = FILETYPE_DIRECTORY, .path = "wasm" });
+	fds.push_back({ .preopen = true, .type = FILETYPE_DIRECTORY, .path = mod_directory });
 	
 	return wasm_runtime_register_natives("wasi_snapshot_preview1", native_symbols_libc_wasi, sizeof(native_symbols_libc_wasi) / sizeof(*native_symbols_libc_wasi));
 }

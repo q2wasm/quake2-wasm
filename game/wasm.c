@@ -18,6 +18,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 */
 
+#ifdef __wasm__
+
 #include <stdarg.h>
 #include <stdio.h>
 #include "api.h"
@@ -155,6 +157,26 @@ void WASM_ServerCommand(void) __WASM_EXPORT__(WASM_ServerCommand)
 	_ge->ServerCommand();
 }
 
+void WASM_WriteGame(const char *filename, qboolean autosave) __WASM_EXPORT__(WASM_WriteGame)
+{
+	_ge->WriteGame(filename, autosave);
+}
+
+void WASM_ReadGame(const char *filename) __WASM_EXPORT__(WASM_ReadGame)
+{
+	_ge->ReadGame(filename);
+}
+
+void WASM_WriteLevel(const char *filename) __WASM_EXPORT__(WASM_WriteLevel)
+{
+	_ge->WriteLevel(filename);
+}
+
+void WASM_ReadLevel(const char *filename) __WASM_EXPORT__(WASM_ReadLevel)
+{
+	_ge->ReadLevel(filename);
+}
+
 #define PARSE_VAR_ARGS \
 	va_list argptr; \
 	static char	string[1024]; \
@@ -265,3 +287,5 @@ void *InitWASMAPI(void) __WASM_EXPORT__(InitWASMAPI)
 
 // this is just here so wasm libc can link
 int32_t main(void) { return 0; }
+
+#endif

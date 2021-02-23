@@ -20,10 +20,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 extern "C"
 {
-#include "shared/shared.h"
-
+#include "shared/entity.h"
 #include "g_main.h"
-#include "g_save.h"
 
 #include <wasm_export.h>
 }
@@ -87,6 +85,9 @@ static void update_cvar_string(const char *src, char *&dst, size_t &dst_size, ui
 		
 		dst_size = length + 1;
 		dst_ptr = wasm_runtime_module_malloc(wasm.module_inst, dst_size, (void **) &dst);
+
+		if (!dst_ptr)
+			gi.error("Out of WASM memory");
 	}
 
 	memcpy(dst, src, dst_size);
@@ -130,6 +131,10 @@ static uint32_t q2_cvar(wasm_exec_env_t, const char *name, const char *value, co
 	{
 		mapped.native = gi.cvar(name, value, flags);
 		mapped.wasm_ptr = wasm_runtime_module_malloc(wasm.module_inst, sizeof(wasm_cvar_t), (void **) &mapped.wasm);
+
+		if (!mapped.wasm_ptr)
+			gi.error("Out of WASM memory");
+
 		memset(mapped.wasm, 0, sizeof(wasm_cvar_t));
 		mapped.wasm->name = wasm_dup_str(mapped.native->name);
 	}
@@ -146,6 +151,10 @@ static uint32_t q2_cvar_set(wasm_exec_env_t, const char *name, const char *value
 	{
 		mapped.native = gi.cvar_set(name, value);
 		mapped.wasm_ptr = wasm_runtime_module_malloc(wasm.module_inst, sizeof(wasm_cvar_t), (void **) &mapped.wasm);
+
+		if (!mapped.wasm_ptr)
+			gi.error("Out of WASM memory");
+
 		memset(mapped.wasm, 0, sizeof(wasm_cvar_t));
 		mapped.wasm->name = wasm_dup_str(mapped.native->name);
 	}
@@ -162,6 +171,10 @@ static uint32_t q2_cvar_forceset(wasm_exec_env_t, const char *name, const char *
 	{
 		mapped.native = gi.cvar_forceset(name, value);
 		mapped.wasm_ptr = wasm_runtime_module_malloc(wasm.module_inst, sizeof(wasm_cvar_t), (void **) &mapped.wasm);
+
+		if (!mapped.wasm_ptr)
+			gi.error("Out of WASM memory");
+
 		memset(mapped.wasm, 0, sizeof(wasm_cvar_t));
 		mapped.wasm->name = wasm_dup_str(mapped.native->name);
 	}
@@ -170,10 +183,14 @@ static uint32_t q2_cvar_forceset(wasm_exec_env_t, const char *name, const char *
 	return mapped.wasm_ptr;
 }
 
-static uint32_t q2_TagMalloc(wasm_exec_env_t, int size, int tag)
+static uint32_t q2_TagMalloc(wasm_exec_env_t, int32_t size, int32_t tag)
 {
 	void *ptr;
 	uint32_t loc = wasm_runtime_module_malloc(wasm.module_inst, size, &ptr);
+
+	if (!loc)
+		gi.error("Out of WASM memory");
+
 	memset(ptr, 0, size);
 	return loc;
 }
@@ -255,6 +272,8 @@ static void q2_setmodel(wasm_exec_env_t, wasm_edict_t *wasm_edict, const char *m
 	wasm_edict->maxs = native_edict->maxs;
 }
 
+static const vec3_t zero = { 0, 0, 0 };
+
 static void q2_trace(wasm_exec_env_t, const vec3_t *start, const vec3_t *mins, const vec3_t *maxs, const vec3_t *end, wasm_edict_t *passent, content_flags_t contentmask, wasm_trace_t *out)
 {
 	for (int32_t i = 0; i < globals.num_edicts; i++)
@@ -264,9 +283,21 @@ static void q2_trace(wasm_exec_env_t, const vec3_t *start, const vec3_t *mins, c
 		if (e->inuse)
 			sync_entity(e, native_entity(i));
 	}
+	
+	if (wasm_native_to_addr((void *) mins) == 0)
+		mins = &zero;
+	if (wasm_native_to_addr((void *) maxs) == 0)
+		maxs = &zero;
+
+	edict_t *native_passent;
+
+	if (wasm_native_to_addr(passent) == 0)
+		native_passent = globals.edicts;
+	else
+		native_passent = entity_wnp_to_np(passent);
 
 	static trace_t tr;
-	tr = gi.trace(start, mins, maxs, end, entity_wnp_to_np(passent), contentmask);
+	tr = gi.trace(start, mins, maxs, end, native_passent, contentmask);
 
 	out->allsolid = tr.allsolid;
 	out->contents = tr.contents;
@@ -276,9 +307,10 @@ static void q2_trace(wasm_exec_env_t, const vec3_t *start, const vec3_t *mins, c
 	out->plane = tr.plane;
 	out->startsolid = tr.startsolid;
 
-	if (!tr.surface)
+	if (!tr.surface || !tr.surface->name[0])
 	{
-		out->surface = 0;
+		wasm.nullsurf_native = tr.surface;
+		out->surface = wasm.nullsurf_ptr;
 		return;
 	}
 
@@ -288,12 +320,22 @@ static void q2_trace(wasm_exec_env_t, const vec3_t *start, const vec3_t *mins, c
 	{
 		csurface_t *wasm_surf;
 		out->surface = wasm_runtime_module_malloc(wasm.module_inst, sizeof(csurface_t), (void **) &wasm_surf);
+
+		if (!out->surface)
+			gi.error("Out of WASM memory");
+
 		*wasm_surf = *tr.surface;
 		native_surf_to_wasm_surf.insert({ tr.surface, out->surface });
 		wasm_surf_to_native_surf.insert({ out->surface, tr.surface });
 	}
 	else
 		out->surface = (*found).second;
+}
+
+void q2_wasm_clear_surface_cache()
+{
+	native_surf_to_wasm_surf.clear();
+	wasm_surf_to_native_surf.clear();
 }
 
 static trace_t q2_wasm_pmove_trace(const vec3_t *start, const vec3_t *mins, const vec3_t *maxs, const vec3_t *end)
@@ -323,7 +365,11 @@ static trace_t q2_wasm_pmove_trace(const vec3_t *start, const vec3_t *mins, cons
 	tr.fraction = wasm.trace_buf->fraction;
 	tr.plane = wasm.trace_buf->plane;
 	tr.startsolid = wasm.trace_buf->startsolid;
-	tr.surface = (*wasm_surf_to_native_surf.find(wasm.trace_buf->surface)).second;
+
+	if (wasm.trace_buf->surface == wasm.nullsurf_ptr)
+		tr.surface = wasm.nullsurf_native;
+	else
+		tr.surface = (*wasm_surf_to_native_surf.find(wasm.trace_buf->surface)).second;
 
 	return tr;
 }
@@ -380,12 +426,12 @@ static void q2_WriteAngle(wasm_exec_env_t, vec_t c)
 	gi.WriteAngle(c);
 }
 
-static void q2_WriteByte(wasm_exec_env_t, int c)
+static void q2_WriteByte(wasm_exec_env_t, int32_t c)
 {
 	gi.WriteByte(c);
 }
 
-static void q2_WriteChar(wasm_exec_env_t, int c)
+static void q2_WriteChar(wasm_exec_env_t, int32_t c)
 {
 	gi.WriteChar(c);
 }
@@ -400,7 +446,7 @@ static void q2_WriteFloat(wasm_exec_env_t, vec_t p)
 	gi.WriteFloat(p);
 }
 
-static void q2_WriteLong(wasm_exec_env_t, int p)
+static void q2_WriteLong(wasm_exec_env_t, int32_t p)
 {
 	gi.WriteLong(p);
 }
@@ -410,7 +456,7 @@ static void q2_WritePosition(wasm_exec_env_t, const vec3_t *p)
 	gi.WritePosition(p);
 }
 
-static void q2_WriteShort(wasm_exec_env_t, int p)
+static void q2_WriteShort(wasm_exec_env_t, int32_t p)
 {
 	gi.WriteShort(p);
 }
@@ -448,12 +494,10 @@ static int32_t q2_BoxEdicts(wasm_exec_env_t, const vec3_t *mins, const vec3_t *m
 	for (int32_t i = 0; i < count; i++)
 		list[i] = entity_np_to_wa(elist[i]);
 
-	gi.TagFree(elist);
-
 	return count;
 }
 
-static void q2_sound(wasm_exec_env_t, wasm_edict_t *ent, sound_channel_t channel, int soundindex, float volume, sound_attn_t attenuation, float timeofs)
+static void q2_sound(wasm_exec_env_t, wasm_edict_t *ent, sound_channel_t channel, int32_t soundindex, vec_t volume, sound_attn_t attenuation, vec_t timeofs)
 {
 	edict_t *native = entity_wnp_to_np(ent);
 
@@ -463,7 +507,7 @@ static void q2_sound(wasm_exec_env_t, wasm_edict_t *ent, sound_channel_t channel
 	gi.sound(native, channel, soundindex, volume, attenuation, timeofs);
 }
 
-static void q2_positioned_sound(wasm_exec_env_t, const vec3_t *origin, wasm_edict_t *ent, sound_channel_t channel, int soundindex, float volume, sound_attn_t attenuation, float timeofs)
+static void q2_positioned_sound(wasm_exec_env_t, const vec3_t *origin, wasm_edict_t *ent, sound_channel_t channel, int32_t soundindex, vec_t volume, sound_attn_t attenuation, vec_t timeofs)
 {
 	edict_t *native = entity_wnp_to_np(ent);
 
@@ -567,5 +611,5 @@ static NativeSymbol native_symbols[] = {
 
 int32_t RegisterApiNatives()
 {
-	return !wasm_runtime_register_natives("q2", native_symbols, sizeof(native_symbols) / sizeof(*native_symbols));
+	return wasm_runtime_register_natives("q2", native_symbols, sizeof(native_symbols) / sizeof(*native_symbols));
 }

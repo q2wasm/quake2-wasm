@@ -17,6 +17,8 @@ inline uint32_t wasm_call(wasm_function_inst_t func, uint32_t (&args)[argN], siz
 
 inline void wasm_call(wasm_function_inst_t func)
 {
-	if (!wasm_runtime_call_wasm(wasm.exec_env, func, 0, nullptr))
+	if (!func)
+		gi.error("Couldn't call WASM function: function missing\n");
+	else if (!wasm_runtime_call_wasm(wasm.exec_env, func, 0, nullptr))
 		gi.error("Couldn't call WASM function: %s\n", wasm_runtime_get_exception(wasm.module_inst));
 }

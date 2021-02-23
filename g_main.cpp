@@ -20,17 +20,60 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 extern "C"
 {
-#include "shared/shared.h"
+#include <stdio.h>
+
+#include "shared/entity.h"
+#include "shared/client.h"
 
 #include "g_main.h"
-#include "g_save.h"
 }
 
 #include "g_wasm.hh"
 
+#if defined(_WIN32)
+inline int32_t strlcpy(char *const dest, const char *src, const size_t len)
+{
+	return snprintf(dest, len, "%s", src);
+}
+#endif
+
 game_import_t gi;
 game_export_t globals;
 wasm_env_t wasm;
+char mod_directory[64];
+char base_directory[260];
+
+static bool wasm_attempt_assembly_load(const char *file)
+{
+	char path[64];
+	snprintf(path, sizeof(path), "%s/%s", mod_directory, file);
+
+	FILE *fp = fopen(path, "rb+");
+
+	if (fp == nullptr)
+	{
+		gi.dprintf("Couldn't load %s: file does not exist\n", file);
+		return false;
+	}
+	
+	fseek(fp, 0, SEEK_END);
+	uint32_t size = ftell(fp);
+	fseek(fp, 0, SEEK_SET);
+	wasm.assembly = (uint8_t *) gi.TagMalloc(size, TAG_GAME);
+	fread(wasm.assembly, sizeof(uint8_t), size, fp);
+	fclose(fp);
+
+	/* parse the WASM file from buffer and create a WASM module */
+	wasm.wasm_module = wasm_runtime_load(wasm.assembly, size, wasm.error_buf, sizeof(wasm.error_buf));
+
+	if (!wasm.wasm_module)
+	{
+		gi.TagFree(wasm.assembly);
+		return false;
+	}
+
+	return true;
+}
 
 /*
 ============
@@ -43,20 +86,16 @@ is loaded.
 */
 static void InitGame(void)
 {
-	const uint32_t stack_size = (1024 * 1024) * 2, heap_size = (1024 * 1024) * 8;
+	const uint32_t stack_size = (1024 * 1024) * 2, heap_size = (1024 * 1024) * 16;
 
-	/* read WASM file into a memory buffer */
-	FILE *fp = fopen("wasm/game.aot", "rb+");
+	cvar_t *game_cvar = gi.cvar("game", "", 0);
 
-	if (fp == nullptr)
-		fp = fopen("wasm/game.wasm", "rb+");
-	
-	fseek(fp, 0, SEEK_END);
-	uint32_t size = ftell(fp);
-	fseek(fp, 0, SEEK_SET);
-	wasm.assembly = (uint8_t *) gi.TagMalloc(size, TAG_GAME);
-	fread(wasm.assembly, sizeof(uint8_t), size, fp);
-	fclose(fp);
+	if (game_cvar->string[0])
+		snprintf(mod_directory, sizeof(mod_directory), "%s", game_cvar->string);
+	else
+		snprintf(mod_directory, sizeof(mod_directory), "baseq2");
+
+	snprintf(base_directory, sizeof(base_directory), "%s", gi.cvar("basedir", ".", 0)->string);
 
 	/* initialize the wasm runtime by default configurations */
 	wasm_runtime_init();
@@ -67,11 +106,12 @@ static void InitGame(void)
 	if (!RegisterApiNatives())
 		gi.error("Unable to initialize API natives");
 
-	/* parse the WASM file from buffer and create a WASM module */
-	wasm.wasm_module = wasm_runtime_load(wasm.assembly, size, wasm.error_buf, sizeof(wasm.error_buf));
+	/* read WASM file into a memory buffer */
+	if (!wasm_attempt_assembly_load("game.aot") &&
+		!wasm_attempt_assembly_load("game.wasm"))
+		gi.error("Unable to load game.aot or game.wasm");
 
-	if (!wasm.wasm_module)
-		gi.error("Unable to load WASM runtime from file: %s\n", wasm.error_buf);
+	//wasm_runtime_set_wasi_args(wasm.wasm_module, dirs, sizeof(dirs) / sizeof(*dirs), NULL, 0, NULL, 0, NULL, 0);
 
 	/* create an instance of the WASM module (WASM linear memory is ready) */
 	wasm.module_inst = wasm_runtime_instantiate(wasm.wasm_module, stack_size, heap_size, wasm.error_buf, sizeof(wasm.error_buf));
@@ -100,6 +140,10 @@ static void InitGame(void)
 	LOAD_FUNC(WASM_ClientThink, "(**)");
 	LOAD_FUNC(WASM_RunFrame, nullptr);
 	LOAD_FUNC(WASM_ServerCommand, nullptr);
+	LOAD_FUNC(WASM_WriteGame, "($i)");
+	LOAD_FUNC(WASM_ReadGame, "($)");
+	LOAD_FUNC(WASM_WriteLevel, "($)");
+	LOAD_FUNC(WASM_ReadLevel, "($)");
 
 	wasm_function_inst_t start_func = wasm_runtime_lookup_function(wasm.module_inst, "_start", NULL);
 
@@ -121,8 +165,6 @@ static void InitGame(void)
 	wasm.edict_size = ((uint32_t *)api_ptr)[1];
 	wasm.num_edicts = &((int32_t *)api_ptr)[2];
 	wasm.max_edicts = ((uint32_t *)api_ptr)[3];
-	wasm.null_ptr = wasm_addr_to_native(0);
-	wasm.null_offset = 0;
 	
 	wasm.ucmd_ptr = wasm_runtime_module_malloc(wasm.module_inst, sizeof(usercmd_t), (void **) &wasm.ucmd_buf);
 	wasm.userinfo_ptr = wasm_runtime_module_malloc(wasm.module_inst, MAX_INFO_STRING + 1, (void **) &wasm.userinfo_buf);
@@ -132,6 +174,24 @@ static void InitGame(void)
 	for (int32_t i = 0; i < sizeof(wasm.cmd_bufs) / sizeof(*wasm.cmd_bufs); i++)
 		wasm.cmd_ptrs[i] = wasm_runtime_module_malloc(wasm.module_inst, MAX_INFO_STRING / 8, (void **) &wasm.cmd_bufs[i]);
 	wasm.scmd_ptr = wasm_runtime_module_malloc(wasm.module_inst, MAX_INFO_STRING, (void **) &wasm.scmd_buf);
+
+	wasm.nullsurf_ptr = wasm_runtime_module_malloc(wasm.module_inst, sizeof(csurface_t), (void **) &wasm.nullsurf_buf);
+
+#define GMF_CLIENTNUM               0x00000001
+#define GMF_PROPERINUSE             0x00000002
+#define GMF_MVDSPEC                 0x00000004
+#define GMF_WANT_ALL_DISCONNECTS    0x00000008
+
+#define GMF_ENHANCED_SAVEGAMES      0x00000400
+#define GMF_VARIABLE_FPS            0x00000800
+#define GMF_EXTRA_USERINFO          0x00001000
+#define GMF_IPV6_ADDRESS_AWARE      0x00002000
+
+	// force enhanced savegames on for q2pro.
+	char new_features[64];
+	cvar_t *g_features = gi.cvar("g_features", "0", 0);
+	snprintf(new_features, sizeof(new_features), "%i", (int32_t)g_features->value | GMF_ENHANCED_SAVEGAMES);
+	gi.cvar_forceset("g_features", new_features);
 }
 
 // copies all of the command buffer data into WASM heap
@@ -140,15 +200,17 @@ static void setup_args()
 	const int32_t n = gi.argc();
 
 	for (int32_t i = 0; i < n; i++)
-		Q_strlcpy(wasm.cmd_bufs[i], gi.argv(i), MAX_INFO_STRING / 8);
-	Q_strlcpy(wasm.scmd_buf, gi.args(), MAX_INFO_STRING);
+		strlcpy(wasm.cmd_bufs[i], gi.argv(i), MAX_INFO_STRING / 8);
+	strlcpy(wasm.scmd_buf, gi.args(), MAX_INFO_STRING);
 }
 
 static void ShutdownGame(void)
 {
-	wasm_runtime_destroy_exec_env(wasm.exec_env);
+	if (wasm.exec_env)
+		wasm_runtime_destroy_exec_env(wasm.exec_env);
 
-	wasm_runtime_deinstantiate(wasm.module_inst);
+	if (wasm.module_inst)
+		wasm_runtime_deinstantiate(wasm.module_inst);
 
 	wasm_runtime_destroy();
 
@@ -158,15 +220,21 @@ static void ShutdownGame(void)
 
 static void SpawnEntities(const char *mapname, const char *entities, const char *spawnpoint)
 {
-	// FIXME: free on next map change
-	uint32_t mapname_str = wasm_dup_str(mapname);
-	uint32_t entities_str = wasm_dup_str(entities);
-	uint32_t spawnpoint_str = wasm_dup_str(spawnpoint);
+	static uint32_t mapname_str, entities_str, spawnpoint_str;
+	
+	if (mapname_str)
+	{
+		q2_wasm_clear_surface_cache();
+
+		wasm_runtime_module_free(wasm.module_inst, mapname_str);
+		wasm_runtime_module_free(wasm.module_inst, entities_str);
+		wasm_runtime_module_free(wasm.module_inst, spawnpoint_str);
+	}
 
 	uint32_t args[] = {
-		mapname_str,
-		entities_str,
-		spawnpoint_str
+		mapname_str = wasm_dup_str(mapname),
+		entities_str = wasm_dup_str(entities),
+		spawnpoint_str = wasm_dup_str(spawnpoint)
 	};
 
 	wasm_call(wasm.WASM_SpawnEntities, args);
@@ -174,7 +242,7 @@ static void SpawnEntities(const char *mapname, const char *entities, const char 
 
 static qboolean ClientConnect(edict_t *e, char *userinfo)
 {
-	Q_strlcpy(wasm.userinfo_buf, userinfo, MAX_INFO_STRING * 2);
+	strlcpy(wasm.userinfo_buf, userinfo, MAX_INFO_STRING * 2);
 
 	uint32_t edict_offset = entity_np_to_wa(e);
 	wasm_edict_t *wasm_edict = entity_wa_to_wnp(edict_offset);
@@ -188,7 +256,7 @@ static qboolean ClientConnect(edict_t *e, char *userinfo)
 
 	wasm_call(wasm.WASM_ClientConnect, args);
 
-	Q_strlcpy(userinfo, wasm.userinfo_buf, MAX_INFO_STRING);
+	strlcpy(userinfo, wasm.userinfo_buf, MAX_INFO_STRING);
 
 	sync_entity(wasm_edict, e);
 
@@ -213,7 +281,7 @@ static void ClientBegin(edict_t *e)
 
 static void ClientUserinfoChanged(edict_t *e, char *userinfo)
 {
-	Q_strlcpy(wasm.userinfo_buf, userinfo, MAX_INFO_STRING * 2);
+	strlcpy(wasm.userinfo_buf, userinfo, MAX_INFO_STRING * 2);
 
 	uint32_t edict_offset = entity_np_to_wa(e);
 	wasm_edict_t *wasm_edict = entity_wa_to_wnp(edict_offset);
@@ -227,7 +295,7 @@ static void ClientUserinfoChanged(edict_t *e, char *userinfo)
 
 	wasm_call(wasm.WASM_ClientUserinfoChanged, args);
 
-	Q_strlcpy(userinfo, wasm.userinfo_buf, MAX_INFO_STRING);
+	strlcpy(userinfo, wasm.userinfo_buf, MAX_INFO_STRING);
 
 	sync_entity(wasm_edict, e);
 }
@@ -273,14 +341,22 @@ static void ClientThink(edict_t *e, usercmd_t *ucmd)
 
 	memcpy(wasm.ucmd_buf, ucmd, sizeof(usercmd_t));
 
+	copy_frame_native_to_wasm(wasm_edict, e);
+
 	uint32_t args[] = {
 		edict_offset,
 		wasm.ucmd_ptr
 	};
 
 	wasm_call(wasm.WASM_ClientThink, args);
+	
+	for (int32_t i = 0; i < globals.num_edicts; i++)
+	{
+		wasm_edict_t *we = entity_number_to_wnp(i);
+		edict_t *n = &globals.edicts[i];
 
-	sync_entity(wasm_edict, e);
+		sync_entity(we, n);
+	}
 }
 
 #include <chrono>
@@ -288,7 +364,10 @@ static void ClientThink(edict_t *e, usercmd_t *ucmd)
 static std::chrono::high_resolution_clock hc;
 
 static void RunFrame(void)
-{
+{	
+	for (int32_t i = 0; i < globals.num_edicts; i++)
+		copy_frame_native_to_wasm(entity_number_to_wnp(i), native_entity(i));
+
 	wasm_call(wasm.WASM_RunFrame);
 
 	globals.num_edicts = *wasm.num_edicts;
@@ -299,10 +378,6 @@ static void RunFrame(void)
 		edict_t *n = &globals.edicts[i];
 
 		sync_entity(e, n);
-		// events only last one frame.
-		// FIXME: I tried syncing these at the start of RunFrame to no avail.
-		// What gives? This should be equivalent, but.. it's weird.
-		e->s.event = 0;
 	}
 }
 
@@ -310,6 +385,89 @@ static void ServerCommand(void)
 {
 	setup_args();
 	wasm_call(wasm.WASM_ServerCommand);
+}
+
+#include <filesystem>
+namespace fs = std::filesystem;
+
+std::string get_relative_file(const char *filename)
+{
+	fs::path path(filename);
+	std::string pathname;
+
+	// already relative to mod directory
+	if (path.is_relative())
+		pathname = filename;
+	else
+		pathname = path.lexically_relative(base_directory).string();
+
+	for (auto n = pathname.find('\\', 0); n != std::string::npos; n = pathname.find('\\', n + 1))
+		pathname[n] = '/';
+
+	return pathname;
+}
+
+static void WriteGame(const char *filename, qboolean autosave)
+{
+	strlcpy(wasm.userinfo_buf, get_relative_file(filename).c_str(), MAX_INFO_STRING);
+
+	uint32_t args[] = {
+		wasm.userinfo_ptr,
+		(uint32_t) autosave
+	};
+
+	wasm_call(wasm.WASM_WriteGame, args);
+}
+
+static void ReadGame(const char *filename)
+{
+	strlcpy(wasm.userinfo_buf, get_relative_file(filename).c_str(), MAX_INFO_STRING);
+
+	uint32_t args[] = {
+		wasm.userinfo_ptr
+	};
+
+	wasm_call(wasm.WASM_ReadGame, args);
+
+	globals.num_edicts = *wasm.num_edicts;
+
+	for (int32_t i = 0; i < globals.num_edicts; i++)
+	{
+		wasm_edict_t *e = entity_number_to_wnp(i);
+		edict_t *n = &globals.edicts[i];
+		sync_entity(e, n);
+	}
+}
+
+static void WriteLevel(const char *filename)
+{
+	strlcpy(wasm.userinfo_buf, get_relative_file(filename).c_str(), MAX_INFO_STRING);
+
+	uint32_t args[] = {
+		wasm.userinfo_ptr
+	};
+
+	wasm_call(wasm.WASM_WriteLevel, args);
+}
+
+static void ReadLevel(const char *filename)
+{
+	strlcpy(wasm.userinfo_buf, get_relative_file(filename).c_str(), MAX_INFO_STRING);
+
+	uint32_t args[] = {
+		wasm.userinfo_ptr
+	};
+
+	wasm_call(wasm.WASM_ReadLevel, args);
+
+	globals.num_edicts = *wasm.num_edicts;
+
+	for (int32_t i = 0; i < globals.num_edicts; i++)
+	{
+		wasm_edict_t *e = entity_number_to_wnp(i);
+		edict_t *n = &globals.edicts[i];
+		sync_entity(e, n);
+	}
 }
 
 /*

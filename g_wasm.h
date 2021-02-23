@@ -3,7 +3,10 @@
 // This file contains structures that are being eaten natively from the
 // WASM sandbox, and functions to handle WASM data.
 
+#include <string.h>
 #include "game/api.h"
+#include "shared/entity.h"
+#include "shared/client.h"
 #include <wasm_export.h>
 
 static inline edict_t *native_entity(int32_t number)
@@ -50,11 +53,6 @@ typedef struct
 	int32_t *num_edicts;
 	int32_t max_edicts;
 
-	wasm_app_address_t	null_offset;
-	// NULL in wasm is indeed zero, but, if NULL is passed through to native code,
-	// it ends up as a special offset from the WASM heap. Might be a bug in WAMR.
-	void				*null_ptr;
-
 	// The various buffers below are used to store data that we read/write to
 	// to communicate to WASM, since we can't pass native pointers through.
 	usercmd_t			*ucmd_buf;
@@ -75,9 +73,13 @@ typedef struct
 	char				*scmd_buf;
 	wasm_app_address_t	scmd_ptr;
 
+	csurface_t				*nullsurf_buf, *nullsurf_native;
+	wasm_surface_address_t	nullsurf_ptr;
+
 	// Function pointers from WASM that we store.
 	wasm_function_inst_t WASM_PmoveTrace, WASM_PmovePointContents, InitWASMAPI, WASM_Init, WASM_SpawnEntities, WASM_ClientConnect,
-		WASM_ClientBegin, WASM_ClientUserinfoChanged, WASM_ClientDisconnect, WASM_ClientCommand, WASM_ClientThink, WASM_RunFrame, WASM_ServerCommand;
+		WASM_ClientBegin, WASM_ClientUserinfoChanged, WASM_ClientDisconnect, WASM_ClientCommand, WASM_ClientThink, WASM_RunFrame, WASM_ServerCommand,
+		WASM_WriteGame, WASM_ReadGame, WASM_WriteLevel, WASM_ReadLevel;
 } wasm_env_t;
 
 extern wasm_env_t wasm;
@@ -109,7 +111,12 @@ typedef wasm_app_address_t wasm_string_t;
 // duplicates a string from a native address into WASM heap memory
 static inline wasm_string_t wasm_dup_str(const char *str)
 {
-	return wasm_runtime_module_dup_data(wasm.module_inst, str, strlen(str) + 1);
+	wasm_string_t s = wasm_runtime_module_dup_data(wasm.module_inst, str, strlen(str) + 1);
+
+	if (!s)
+		gi.error("Out of WASM memory");
+
+	return s;
 }
 
 typedef struct
@@ -195,7 +202,7 @@ static inline wasm_entity_address_t entity_np_to_wa(edict_t *e)
 
 inline edict_t *entity_wnp_to_np(wasm_edict_t *e)
 {
-	return (e && e != wasm.null_ptr) ? native_entity(entity_wnp_to_number(e)) : NULL;
+	return wasm_native_to_addr(e) ? native_entity(entity_wnp_to_number(e)) : NULL;
 }
 
 inline edict_t *entity_wa_to_np(wasm_entity_address_t e)
@@ -203,7 +210,7 @@ inline edict_t *entity_wa_to_np(wasm_entity_address_t e)
 	return e ? native_entity(entity_wa_to_number(e)) : NULL;
 }
 
-static inline void copy_link_wasm_to_native(edict_t *native_edict, wasm_edict_t *wasm_edict)
+static inline void copy_link_wasm_to_native(edict_t *native_edict, const wasm_edict_t *wasm_edict)
 {
 	native_edict->s = wasm_edict->s;
 	native_edict->inuse = wasm_edict->inuse;
@@ -212,9 +219,10 @@ static inline void copy_link_wasm_to_native(edict_t *native_edict, wasm_edict_t 
 	native_edict->maxs = wasm_edict->maxs;
 	native_edict->clipmask = wasm_edict->clipmask;
 	native_edict->solid = wasm_edict->solid;
+	native_edict->linkcount = wasm_edict->linkcount;
 }
 
-static inline void copy_link_native_to_wasm(wasm_edict_t *wasm_edict, edict_t *native_edict)
+static inline void copy_link_native_to_wasm(wasm_edict_t *wasm_edict, const edict_t *native_edict)
 {
 	wasm_edict->area.next = native_edict->area.next ? 1 : 0;
 	wasm_edict->area.prev = native_edict->area.prev ? 1 : 0;
@@ -227,8 +235,24 @@ static inline void copy_link_native_to_wasm(wasm_edict_t *wasm_edict, edict_t *n
 	wasm_edict->s.solid = native_edict->s.solid;
 }
 
+static inline void copy_frame_native_to_wasm(wasm_edict_t *wasm_edict, const edict_t *native_edict)
+{
+	wasm_edict->s.event = native_edict->s.event;
+}
+
+static inline bool should_sync_entity(const wasm_edict_t *wasm_edict, const edict_t *native)
+{
+	return (!wasm_edict->client != !native->client ||
+		wasm_edict->inuse != native->inuse ||
+		wasm_edict->inuse);
+}
+
 static inline void sync_entity(wasm_edict_t *wasm_edict, edict_t *native)
 {
+	// Don't bother syncing non-inuse entities.
+	if (!should_sync_entity(wasm_edict, native))
+		return;
+
 	// sync main data
 	copy_link_wasm_to_native(native, wasm_edict);
 
@@ -285,6 +309,8 @@ typedef struct
 	wasm_function_pointer_t trace;
 	wasm_function_pointer_t pointcontents;
 } wasm_pmove_t;
+
+void q2_wasm_clear_surface_cache(void);
 
 int32_t RegisterWasiNatives(void);
 int32_t RegisterApiNatives(void);
