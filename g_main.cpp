@@ -157,13 +157,14 @@ static void InitGame(void)
 
 	wasm_call(wasm.WASM_Init);
 
-	if (!wasm_runtime_validate_native_addr(wasm.module_inst, api_ptr, sizeof(int32_t) * 4))
+	if (!wasm_validate_ptr(api_ptr, sizeof(int32_t) * 4))
 		gi.error("InitWASMAPI returned invalid memory\n");
 
 	wasm.edict_base = ((uint32_t *)api_ptr)[0];
 	wasm.edict_size = ((uint32_t *)api_ptr)[1];
 	wasm.num_edicts = &((int32_t *)api_ptr)[2];
 	wasm.max_edicts = ((uint32_t *)api_ptr)[3];
+	wasm.edict_end = wasm.edict_base + (wasm.edict_size * wasm.max_edicts);
 	
 	wasm.ucmd_ptr = wasm_runtime_module_malloc(wasm.module_inst, sizeof(usercmd_t), (void **) &wasm.ucmd_buf);
 	wasm.userinfo_ptr = wasm_runtime_module_malloc(wasm.module_inst, MAX_INFO_STRING + 1, (void **) &wasm.userinfo_buf);
@@ -377,7 +378,7 @@ static void ClientThink(edict_t *e, usercmd_t *ucmd)
 static void RunFrame(void)
 {	
 	for (int32_t i = 0; i < globals.num_edicts; i++)
-		copy_frame_native_to_wasm(entity_number_to_wnp(i), native_entity(i));
+		copy_frame_native_to_wasm(entity_number_to_wnp(i), entity_number_to_np(i));
 
 	wasm_call(wasm.WASM_RunFrame);
 
@@ -463,7 +464,7 @@ static void WriteLevel(const char *filename)
 
 	for (int32_t i = 0; i < max_clients; i++)
 	{
-		edict_t *e = native_entity(i + 1);
+		edict_t *e = entity_number_to_np(i + 1);
 
 		if (e->inuse)
 		{
