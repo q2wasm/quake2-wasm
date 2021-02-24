@@ -491,6 +491,27 @@ static int32_t q2_fd_close(wasm_exec_env_t, int32_t id)
 	return ERRNO_BADF;
 }
 
+#include <chrono>
+namespace chrono = std::chrono;
+
+static chrono::steady_clock monotonic;
+static chrono::system_clock real_clock;
+
+static int32_t q2_clock_time_get(wasm_exec_env_t, int32_t clock_id, uint64_t, uint64_t *stamp)
+{
+	switch (clock_id)
+	{
+	case CLOCKID_REALTIME:
+		*stamp = monotonic.now().time_since_epoch().count();
+		return ERRNO_SUCCESS;
+	case CLOCKID_MONOTONIC:
+		*stamp = real_clock.now().time_since_epoch().count();
+		return ERRNO_SUCCESS;
+	}
+
+	return ERRNO_INVAL;
+}
+
 #define SYMBOL(name, sig) \
 	{ #name, (void *) q2_ ## name, sig, nullptr }
 
@@ -498,7 +519,7 @@ static NativeSymbol native_symbols_libc_wasi[] = {
 	//SYMBOL(args_get, "(**)i"),
 	//SYMBOL(args_sizes_get, "(**)i"),
 	//SYMBOL(clock_res_get, "(i*)i"),
-	//SYMBOL(clock_time_get, "(iI*)i"),
+	SYMBOL(clock_time_get, "(iI*)i"),
 	//SYMBOL(environ_get, "(**)i"),
 	//SYMBOL(environ_sizes_get, "(**)i"),
 	SYMBOL(fd_prestat_get, "(i*)i"),

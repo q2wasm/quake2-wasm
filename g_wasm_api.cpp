@@ -183,26 +183,73 @@ static uint32_t q2_cvar_forceset(wasm_exec_env_t, const char *name, const char *
 	return mapped.wasm_ptr;
 }
 
-static uint32_t q2_TagMalloc(wasm_exec_env_t, int32_t size, int32_t tag)
+#include <list>
+#include <unordered_set>
+
+struct tagged_block
+{
+	uint32_t memory;
+	void *ptr;
+	uint32_t tag;
+};
+
+static std::list<tagged_block> tagged_blocks;
+static std::unordered_map<uint32_t, std::unordered_set<void *>> tagged_entries;
+static std::unordered_map<void *, std::list<tagged_block>::iterator> memory_map;
+
+static uint32_t q2_TagMalloc(wasm_exec_env_t, uint32_t size, uint32_t tag)
 {
 	void *ptr;
 	uint32_t loc = wasm_runtime_module_malloc(wasm.module_inst, size, &ptr);
 
 	if (!loc)
 		gi.error("Out of WASM memory");
-
+	
 	memset(ptr, 0, size);
+
+	auto it = tagged_blocks.insert(tagged_blocks.begin(), tagged_block {
+		.memory = loc,
+		.ptr = ptr,
+		.tag = tag
+	});
+
+	auto hash = tagged_entries.find(tag);
+
+	if (hash == tagged_entries.end())
+		tagged_entries.insert({ tag, { ptr } });
+	else
+		(*hash).second.insert(ptr);
+
+	memory_map.insert({ ptr, it });
+
 	return loc;
 }
 
 static void q2_TagFree(wasm_exec_env_t, void *ptr)
 {
 	wasm_runtime_module_free(wasm.module_inst, wasm_native_to_addr(ptr));
+
+	auto it = memory_map.at(ptr);
+	memory_map.erase(ptr);
+	(*tagged_entries.find((*it).tag)).second.erase(ptr);
+	tagged_blocks.erase(it);
 }
 
-static void q2_FreeTags(wasm_exec_env_t, int32_t tag)
+static void q2_FreeTags(wasm_exec_env_t, uint32_t tag)
 {
-	gi.FreeTags(tag);
+	auto blocks = tagged_entries.find(tag);
+
+	if (blocks == tagged_entries.end())
+		return;
+
+	for (auto ptr : (*blocks).second)
+	{
+		tagged_blocks.erase((*memory_map.find(ptr)).second);
+		wasm_runtime_module_free(wasm.module_inst, wasm_native_to_addr(ptr));
+		memory_map.erase(ptr);
+	}
+
+	tagged_entries.erase(tag);
 }
 
 static void q2_configstring(wasm_exec_env_t, int32_t id, const char *value)
@@ -281,7 +328,7 @@ static void q2_trace(wasm_exec_env_t, const vec3_t *start, const vec3_t *mins, c
 		wasm_edict_t *e = entity_number_to_wnp(i);
 
 		if (e->inuse)
-			sync_entity(e, native_entity(i));
+			sync_entity(e, native_entity(i), false);
 	}
 	
 	if (wasm_native_to_addr((void *) mins) == 0)
@@ -484,7 +531,7 @@ static int32_t q2_BoxEdicts(wasm_exec_env_t, const vec3_t *mins, const vec3_t *m
 		edict_t *n = native_entity(i);
 
 		if (e->inuse)
-			sync_entity(e, n);
+			sync_entity(e, n, false);
 	}
 
 	static edict_t *elist[MAX_EDICTS];
@@ -502,7 +549,7 @@ static void q2_sound(wasm_exec_env_t, wasm_edict_t *ent, sound_channel_t channel
 	edict_t *native = entity_wnp_to_np(ent);
 
 	if (native)
-		sync_entity(ent, native);
+		sync_entity(ent, native, false);
 
 	gi.sound(native, channel, soundindex, volume, attenuation, timeofs);
 }
@@ -512,7 +559,7 @@ static void q2_positioned_sound(wasm_exec_env_t, const vec3_t *origin, wasm_edic
 	edict_t *native = entity_wnp_to_np(ent);
 
 	if (native)
-		sync_entity(ent, native);
+		sync_entity(ent, native, false);
 
 	gi.positioned_sound(origin, native, channel, soundindex, volume, attenuation, timeofs);
 }

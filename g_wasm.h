@@ -247,10 +247,10 @@ static inline bool should_sync_entity(const wasm_edict_t *wasm_edict, const edic
 		wasm_edict->inuse);
 }
 
-static inline void sync_entity(wasm_edict_t *wasm_edict, edict_t *native)
+static inline void sync_entity(wasm_edict_t *wasm_edict, edict_t *native, bool force)
 {
 	// Don't bother syncing non-inuse entities.
-	if (!should_sync_entity(wasm_edict, native))
+	if (!force && !should_sync_entity(wasm_edict, native))
 		return;
 
 	// sync main data
@@ -258,10 +258,6 @@ static inline void sync_entity(wasm_edict_t *wasm_edict, edict_t *native)
 
 	// fill owner pointer
 	native->owner = entity_wa_to_np(wasm_edict->owner);
-	
-	// sync owner
-	if (native->owner)
-		sync_entity(entity_wa_to_wnp(wasm_edict->owner), native->owner);
 
 	// sync client structure, if it exists
 	if (wasm_edict->client)
