@@ -292,7 +292,10 @@ static void q2_linkentity(wasm_exec_env_t, wasm_edict_t *wasm_edict)
 	edict_t *native_edict = entity_wnp_to_np(wasm_edict);
 
 	copy_link_wasm_to_native(native_edict, wasm_edict);
+	const bool copy_old_origin = wasm_edict->linkcount == 0;
 	gi.linkentity(native_edict);
+	if (copy_old_origin)
+		wasm_edict->s.old_origin = native_edict->s.old_origin;
 	copy_link_native_to_wasm(wasm_edict, native_edict);
 }
 

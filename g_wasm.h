@@ -233,6 +233,7 @@ static inline void copy_link_native_to_wasm(wasm_edict_t *wasm_edict, const edic
 	wasm_edict->absmax = native_edict->absmax;
 	wasm_edict->size = native_edict->size;
 	wasm_edict->s.solid = native_edict->s.solid;
+	wasm_edict->linkcount = native_edict->linkcount;
 }
 
 static inline void copy_frame_native_to_wasm(wasm_edict_t *wasm_edict, const edict_t *native_edict)
@@ -249,6 +250,8 @@ static inline bool should_sync_entity(const wasm_edict_t *wasm_edict, const edic
 
 static inline void sync_entity(wasm_edict_t *wasm_edict, edict_t *native, bool force)
 {
+	native->s.renderfx |= 64;
+
 	// Don't bother syncing non-inuse entities.
 	if (!force && !should_sync_entity(wasm_edict, native))
 		return;
