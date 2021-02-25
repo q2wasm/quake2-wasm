@@ -100,6 +100,11 @@ static inline wasm_app_pointer_t wasm_native_to_pointer(void *native)
 	return (wasm_app_pointer_t)wasm_runtime_addr_native_to_app(wasm.module_inst, native);
 }
 
+static inline bool wasm_validate_addr(uint32_t addr, uint32_t size)
+{
+	return wasm_runtime_validate_app_addr(wasm.module_inst, addr, size);
+}
+
 static inline bool wasm_validate_ptr(const void *ptr, uint32_t size)
 {
 	return wasm_runtime_validate_native_addr(wasm.module_inst, (void *) ptr, size);
@@ -114,7 +119,7 @@ static inline wasm_string_t wasm_dup_str(const char *str)
 	wasm_string_t s = wasm_runtime_module_dup_data(wasm.module_inst, str, strlen(str) + 1);
 
 	if (!s)
-		gi.error("Out of WASM memory");
+		wasm_error("Out of WASM memory");
 
 	return s;
 }

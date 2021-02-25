@@ -87,7 +87,7 @@ is loaded.
 */
 static void InitGame(void)
 {
-	const uint32_t stack_size = 1024 * 1024, heap_size = 33554432;
+	const uint32_t stack_size = 1024 * 1024, heap_size = 1024 * 1024 * 16;
 
 	cvar_t *game_cvar = gi.cvar("game", "", 0);
 
@@ -102,31 +102,31 @@ static void InitGame(void)
 	wasm_runtime_init();
 
 	if (!RegisterWasiNatives())
-		gi.error("Unable to initialize WASI natives");
+		wasm_error("Unable to initialize WASI natives");
 
 	if (!RegisterApiNatives())
-		gi.error("Unable to initialize API natives");
+		wasm_error("Unable to initialize API natives");
 
 	/* read WASM file into a memory buffer */
 	if (!wasm_attempt_assembly_load("game.aot") &&
 		!wasm_attempt_assembly_load("game.wasm"))
-		gi.error("Unable to load game.aot or game.wasm");
+		wasm_error("Unable to load game.aot or game.wasm");
 
 	/* create an instance of the WASM module (WASM linear memory is ready) */
-	wasm.module_inst = wasm_runtime_instantiate(wasm.wasm_module, stack_size, heap_size, wasm.error_buf, sizeof(wasm.error_buf));
+	wasm.module_inst = wasm_runtime_instantiate(wasm.wasm_module, 1024 * 8, heap_size, wasm.error_buf, sizeof(wasm.error_buf));
 
 	if (!wasm.module_inst)
-		gi.error("Unable to instantiate WASM module: %s\n", wasm.error_buf);
+		wasm_error(wasm.error_buf);
 
 	wasm.exec_env = wasm_runtime_create_exec_env(wasm.module_inst, stack_size);
 
 	if (!wasm.exec_env)
-		gi.error("Unable to create WASM execution environment: %s\n", wasm_runtime_get_exception(wasm.module_inst));
+		wasm_error(wasm_runtime_get_exception(wasm.module_inst));
 	
 	wasm_function_inst_t start_func = wasm_runtime_lookup_function(wasm.module_inst, "_initialize", NULL);
 
 	if (!start_func)
-		gi.error("Unable to find _initialize function\n");
+		wasm_error("Unable to find _initialize function");
 
 	wasm_call(start_func);
 
@@ -135,7 +135,7 @@ static void InitGame(void)
 
 	LOAD_FUNC(WASM_PmoveTrace, "(******)");
 	LOAD_FUNC(WASM_PmovePointContents, "(**)");
-	LOAD_FUNC(InitWASMAPI, "()*");
+	LOAD_FUNC(InitWASMAPI, "(****)");
 	LOAD_FUNC(WASM_Init, nullptr);
 	LOAD_FUNC(WASM_SpawnEntities, "($$$)");
 	LOAD_FUNC(WASM_ClientConnect, "(*$)i");
@@ -151,23 +151,37 @@ static void InitGame(void)
 	LOAD_FUNC(WASM_WriteLevel, "($)");
 	LOAD_FUNC(WASM_ReadLevel, "($)");
 
-	uint32_t args[1];
+	// allocate a bit of space to be used to store some stuff by InitWASMAPI
+	uint32_t *scratch_buf;
+	uint32_t scratch_ptr = wasm_runtime_module_malloc(wasm.module_inst, sizeof(uint32_t) * 4, (void **) &scratch_buf);
 
-	wasm_call(wasm.InitWASMAPI, args, 0);
+	uint32_t args[4] = {
+		scratch_ptr,
+		scratch_ptr + 4,
+		scratch_ptr + 8,
+		scratch_ptr + 12
+	};
 
-	// fetch the returned pointer
-	void *api_ptr = wasm_runtime_addr_app_to_native(wasm.module_inst, args[0]);
+	wasm_call(wasm.InitWASMAPI, args);
 
 	wasm_call(wasm.WASM_Init);
 
-	if (!wasm_validate_ptr(api_ptr, sizeof(int32_t) * 4))
-		gi.error("InitWASMAPI returned invalid memory\n");
+	if (!wasm_validate_addr(scratch_buf[1], sizeof(int32_t)) ||
+		!wasm_validate_addr(scratch_buf[2], sizeof(int32_t)) ||
+		!wasm_validate_addr(scratch_buf[3], sizeof(int32_t)))
+		wasm_error("InitWASMAPI returned invalid memory");
 
-	wasm.edict_base = ((uint32_t *)api_ptr)[0];
-	wasm.edict_size = ((uint32_t *)api_ptr)[1];
-	wasm.num_edicts = &((int32_t *)api_ptr)[2];
-	wasm.max_edicts = ((uint32_t *)api_ptr)[3];
+	wasm.num_edicts = ((int32_t *)wasm_addr_to_native(scratch_buf[2]));
+	wasm.edict_size = *((int32_t *)wasm_addr_to_native(scratch_buf[1]));
+	wasm.max_edicts = *((int32_t *)wasm_addr_to_native(scratch_buf[3]));
+	wasm.edict_base = *((wasm_app_address_t *)wasm_addr_to_native(scratch_buf[0]));
+
+	if (!wasm_runtime_validate_app_addr(wasm.module_inst, wasm.edict_base, wasm.edict_size * wasm.max_edicts))
+		wasm_error("InitWASMAPI returned invalid memory");
+
 	wasm.edict_end = wasm.edict_base + (wasm.edict_size * wasm.max_edicts);
+
+	wasm_runtime_module_free(wasm.module_inst, scratch_ptr);
 	
 	wasm.ucmd_ptr = wasm_runtime_module_malloc(wasm.module_inst, sizeof(usercmd_t), (void **) &wasm.ucmd_buf);
 	wasm.userinfo_ptr = wasm_runtime_module_malloc(wasm.module_inst, MAX_INFO_STRING + 1, (void **) &wasm.userinfo_buf);

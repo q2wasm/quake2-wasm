@@ -10,7 +10,7 @@ template<size_t argN>
 inline uint32_t wasm_call(wasm_function_inst_t func, uint32_t (&args)[argN], size_t num_args = argN)
 {
 	if (!wasm_runtime_call_wasm(wasm.exec_env, func, num_args, args))
-		gi.error("Couldn't call WASM function: %s\n", wasm_runtime_get_exception(wasm.module_inst));
+		wasm_error(wasm_runtime_get_exception(wasm.module_inst));
 
 	return args[0];
 }
@@ -18,7 +18,7 @@ inline uint32_t wasm_call(wasm_function_inst_t func, uint32_t (&args)[argN], siz
 inline void wasm_call(wasm_function_inst_t func)
 {
 	if (!func)
-		gi.error("Couldn't call WASM function: function missing\n");
+		wasm_error("Couldn't call WASM function: function missing");
 	else if (!wasm_runtime_call_wasm(wasm.exec_env, func, 0, nullptr))
-		gi.error("Couldn't call WASM function: %s\n", wasm_runtime_get_exception(wasm.module_inst));
+		wasm_error(wasm_runtime_get_exception(wasm.module_inst));
 }
