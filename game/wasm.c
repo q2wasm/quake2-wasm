@@ -285,7 +285,4 @@ void *InitWASMAPI(void) __WASM_EXPORT__(InitWASMAPI)
 	return &_ge->edicts;
 }
 
-// this is just here so wasm libc can link
-int32_t main(void) { return 0; }
-
 #endif
