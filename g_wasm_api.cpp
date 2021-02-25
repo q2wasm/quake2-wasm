@@ -183,26 +183,73 @@ static uint32_t q2_cvar_forceset(wasm_exec_env_t, const char *name, const char *
 	return mapped.wasm_ptr;
 }
 
-static uint32_t q2_TagMalloc(wasm_exec_env_t, int32_t size, int32_t tag)
+#include <list>
+#include <unordered_set>
+
+struct tagged_block
+{
+	uint32_t memory;
+	void *ptr;
+	uint32_t tag;
+};
+
+static std::list<tagged_block> tagged_blocks;
+static std::unordered_map<uint32_t, std::unordered_set<void *>> tagged_entries;
+static std::unordered_map<void *, std::list<tagged_block>::iterator> memory_map;
+
+static uint32_t q2_TagMalloc(wasm_exec_env_t, uint32_t size, uint32_t tag)
 {
 	void *ptr;
 	uint32_t loc = wasm_runtime_module_malloc(wasm.module_inst, size, &ptr);
 
 	if (!loc)
 		gi.error("Out of WASM memory");
-
+	
 	memset(ptr, 0, size);
+
+	auto it = tagged_blocks.insert(tagged_blocks.begin(), tagged_block {
+		.memory = loc,
+		.ptr = ptr,
+		.tag = tag
+	});
+
+	auto hash = tagged_entries.find(tag);
+
+	if (hash == tagged_entries.end())
+		tagged_entries.insert({ tag, { ptr } });
+	else
+		(*hash).second.insert(ptr);
+
+	memory_map.insert({ ptr, it });
+
 	return loc;
 }
 
 static void q2_TagFree(wasm_exec_env_t, void *ptr)
 {
 	wasm_runtime_module_free(wasm.module_inst, wasm_native_to_addr(ptr));
+
+	auto it = memory_map.at(ptr);
+	memory_map.erase(ptr);
+	(*tagged_entries.find((*it).tag)).second.erase(ptr);
+	tagged_blocks.erase(it);
 }
 
-static void q2_FreeTags(wasm_exec_env_t, int32_t tag)
+static void q2_FreeTags(wasm_exec_env_t, uint32_t tag)
 {
-	gi.FreeTags(tag);
+	auto blocks = tagged_entries.find(tag);
+
+	if (blocks == tagged_entries.end())
+		return;
+
+	for (auto ptr : (*blocks).second)
+	{
+		tagged_blocks.erase((*memory_map.find(ptr)).second);
+		wasm_runtime_module_free(wasm.module_inst, wasm_native_to_addr(ptr));
+		memory_map.erase(ptr);
+	}
+
+	tagged_entries.erase(tag);
 }
 
 static void q2_configstring(wasm_exec_env_t, int32_t id, const char *value)
@@ -227,11 +274,17 @@ static int32_t q2_soundindex(wasm_exec_env_t, const char *value)
 
 static void q2_cprint(wasm_exec_env_t, wasm_edict_t *ent, print_level_t print_level, const char *str)
 {
+	if (!entity_validate_wnp(ent))
+		gi.error("Invalid pointer");
+
 	gi.cprintf(entity_wnp_to_np(ent), print_level, "%s", str);
 }
 
 static void q2_centerprint(wasm_exec_env_t, wasm_edict_t *ent, const char *str)
 {
+	if (!entity_validate_wnp(ent))
+		gi.error("Invalid pointer");
+
 	gi.centerprintf(entity_wnp_to_np(ent), "%s", str);
 }
 
@@ -242,15 +295,24 @@ static void q2_error(wasm_exec_env_t, const char *str)
 
 static void q2_linkentity(wasm_exec_env_t, wasm_edict_t *wasm_edict)
 {
+	if (!entity_validate_wnp(wasm_edict))
+		gi.error("Invalid pointer");
+
 	edict_t *native_edict = entity_wnp_to_np(wasm_edict);
 
 	copy_link_wasm_to_native(native_edict, wasm_edict);
+	const bool copy_old_origin = wasm_edict->linkcount == 0;
 	gi.linkentity(native_edict);
+	if (copy_old_origin)
+		wasm_edict->s.old_origin = native_edict->s.old_origin;
 	copy_link_native_to_wasm(wasm_edict, native_edict);
 }
 
 static void q2_unlinkentity(wasm_exec_env_t, wasm_edict_t *wasm_edict)
 {
+	if (!entity_validate_wnp(wasm_edict))
+		gi.error("Invalid pointer");
+
 	edict_t *native_edict = entity_wnp_to_np(wasm_edict);
 
 	copy_link_wasm_to_native(native_edict, wasm_edict);
@@ -260,6 +322,9 @@ static void q2_unlinkentity(wasm_exec_env_t, wasm_edict_t *wasm_edict)
 
 static void q2_setmodel(wasm_exec_env_t, wasm_edict_t *wasm_edict, const char *model)
 {
+	if (!entity_validate_wnp(wasm_edict))
+		gi.error("Invalid pointer");
+
 	edict_t *native_edict = entity_wnp_to_np(wasm_edict);
 
 	copy_link_wasm_to_native(native_edict, wasm_edict);
@@ -276,18 +341,32 @@ static const vec3_t zero = { 0, 0, 0 };
 
 static void q2_trace(wasm_exec_env_t, const vec3_t *start, const vec3_t *mins, const vec3_t *maxs, const vec3_t *end, wasm_edict_t *passent, content_flags_t contentmask, wasm_trace_t *out)
 {
+	if (!wasm_validate_ptr(start, sizeof(vec3_t)))
+		gi.error("Invalid pointer");
+	if (!wasm_validate_ptr(end, sizeof(vec3_t)))
+		gi.error("Invalid pointer");
+	if (!entity_validate_wnp(passent))
+		gi.error("Invalid pointer");
+	if (!wasm_validate_ptr(out, sizeof(wasm_trace_t)))
+		gi.error("Invalid pointer");
+
 	for (int32_t i = 0; i < globals.num_edicts; i++)
 	{
 		wasm_edict_t *e = entity_number_to_wnp(i);
 
 		if (e->inuse)
-			sync_entity(e, native_entity(i));
+			sync_entity(e, entity_number_to_np(i), false);
 	}
 	
 	if (wasm_native_to_addr((void *) mins) == 0)
 		mins = &zero;
+	else if (!wasm_validate_ptr(mins, sizeof(vec3_t)))
+		gi.error("Invalid pointer");
+
 	if (wasm_native_to_addr((void *) maxs) == 0)
 		maxs = &zero;
+	else if (!wasm_validate_ptr(maxs, sizeof(vec3_t)))
+		gi.error("Invalid pointer");
 
 	edict_t *native_passent;
 
@@ -390,6 +469,9 @@ static content_flags_t q2_wasm_pmove_pointcontents(const vec3_t *start)
 
 static void q2_Pmove(wasm_exec_env_t, wasm_pmove_t *wasm_pmove)
 {
+	if (!wasm_validate_ptr(wasm_pmove, sizeof(wasm_pmove_t)))
+		gi.error("Invalid pointer");
+
 	static pmove_t pm;
 
 	pm.s = wasm_pmove->s;
@@ -418,6 +500,9 @@ static void q2_Pmove(wasm_exec_env_t, wasm_pmove_t *wasm_pmove)
 
 static content_flags_t q2_pointcontents(wasm_exec_env_t, const vec3_t *p)
 {
+	if (!wasm_validate_ptr(p, sizeof(vec3_t)))
+		gi.error("Invalid pointer");
+
 	return gi.pointcontents(p);
 }
 
@@ -438,6 +523,9 @@ static void q2_WriteChar(wasm_exec_env_t, int32_t c)
 
 static void q2_WriteDir(wasm_exec_env_t, const vec3_t *p)
 {
+	if (!wasm_validate_ptr(p, sizeof(vec3_t)))
+		gi.error("Invalid pointer");
+
 	gi.WriteDir(p);
 }
 
@@ -453,6 +541,9 @@ static void q2_WriteLong(wasm_exec_env_t, int32_t p)
 
 static void q2_WritePosition(wasm_exec_env_t, const vec3_t *p)
 {
+	if (!wasm_validate_ptr(p, sizeof(vec3_t)))
+		gi.error("Invalid pointer");
+
 	gi.WritePosition(p);
 }
 
@@ -468,23 +559,36 @@ static void q2_WriteString(wasm_exec_env_t, const char *p)
 
 static void q2_unicast(wasm_exec_env_t, wasm_edict_t *ent, qboolean reliable)
 {
+	if (!entity_validate_wnp(ent))
+		gi.error("Invalid pointer");
+
 	gi.unicast(entity_wnp_to_np(ent), reliable);
 }
 
 static void q2_multicast(wasm_exec_env_t, const vec3_t *origin, multicast_t to)
 {
+	if (!wasm_validate_ptr(origin, sizeof(vec3_t)))
+		gi.error("Invalid pointer");
+
 	gi.multicast(origin, to);
 }
 
 static int32_t q2_BoxEdicts(wasm_exec_env_t, const vec3_t *mins, const vec3_t *maxs, uint32_t *list, int32_t maxcount, box_edicts_area_t areatype)
 {
+	if (!wasm_validate_ptr(mins, sizeof(vec3_t)))
+		gi.error("Invalid pointer");
+	if (!wasm_validate_ptr(maxs, sizeof(vec3_t)))
+		gi.error("Invalid pointer");
+	if (!wasm_validate_ptr(list, sizeof(uint32_t) * maxcount))
+		gi.error("Invalid pointer");
+
 	for (int32_t i = 0; i < globals.num_edicts; i++)
 	{
 		wasm_edict_t *e = entity_number_to_wnp(i);
-		edict_t *n = native_entity(i);
+		edict_t *n = entity_number_to_np(i);
 
 		if (e->inuse)
-			sync_entity(e, n);
+			sync_entity(e, n, false);
 	}
 
 	static edict_t *elist[MAX_EDICTS];
@@ -499,20 +603,28 @@ static int32_t q2_BoxEdicts(wasm_exec_env_t, const vec3_t *mins, const vec3_t *m
 
 static void q2_sound(wasm_exec_env_t, wasm_edict_t *ent, sound_channel_t channel, int32_t soundindex, vec_t volume, sound_attn_t attenuation, vec_t timeofs)
 {
+	if (!entity_validate_wnp(ent))
+		gi.error("Invalid pointer");
+
 	edict_t *native = entity_wnp_to_np(ent);
 
 	if (native)
-		sync_entity(ent, native);
+		sync_entity(ent, native, false);
 
 	gi.sound(native, channel, soundindex, volume, attenuation, timeofs);
 }
 
 static void q2_positioned_sound(wasm_exec_env_t, const vec3_t *origin, wasm_edict_t *ent, sound_channel_t channel, int32_t soundindex, vec_t volume, sound_attn_t attenuation, vec_t timeofs)
 {
+	if (!entity_validate_wnp(ent))
+		gi.error("Invalid pointer");
+	if (!wasm_validate_ptr(origin, sizeof(vec3_t)))
+		gi.error("Invalid pointer");
+
 	edict_t *native = entity_wnp_to_np(ent);
 
 	if (native)
-		sync_entity(ent, native);
+		sync_entity(ent, native, false);
 
 	gi.positioned_sound(origin, native, channel, soundindex, volume, attenuation, timeofs);
 }
@@ -547,11 +659,21 @@ static qboolean q2_AreasConnected(wasm_exec_env_t, int32_t a, int32_t b)
 
 static qboolean q2_inPHS(wasm_exec_env_t, const vec3_t *a, const vec3_t *b)
 {
+	if (!wasm_validate_ptr(a, sizeof(vec3_t)))
+		gi.error("Invalid pointer");
+	if (!wasm_validate_ptr(b, sizeof(vec3_t)))
+		gi.error("Invalid pointer");
+
 	return gi.inPHS(a, b);
 }
 
 static qboolean q2_inPVS(wasm_exec_env_t, const vec3_t *a, const vec3_t *b)
 {
+	if (!wasm_validate_ptr(a, sizeof(vec3_t)))
+		gi.error("Invalid pointer");
+	if (!wasm_validate_ptr(b, sizeof(vec3_t)))
+		gi.error("Invalid pointer");
+
 	return gi.inPVS(a, b);
 }
 

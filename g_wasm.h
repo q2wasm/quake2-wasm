@@ -9,11 +9,6 @@
 #include "shared/client.h"
 #include <wasm_export.h>
 
-static inline edict_t *native_entity(int32_t number)
-{
-	return &globals.edicts[number];
-}
-
 // Address relative to wasm heap.
 typedef uint32_t wasm_app_address_t;
 
@@ -48,7 +43,7 @@ typedef struct
 	uint8_t *assembly;
 	char error_buf[128];
 
-	wasm_app_address_t edict_base;
+	wasm_app_address_t edict_base, edict_end;
 	int32_t edict_size;
 	int32_t *num_edicts;
 	int32_t max_edicts;
@@ -103,6 +98,11 @@ static inline wasm_app_address_t wasm_native_to_addr(void *native)
 static inline wasm_app_pointer_t wasm_native_to_pointer(void *native)
 {
 	return (wasm_app_pointer_t)wasm_runtime_addr_native_to_app(wasm.module_inst, native);
+}
+
+static inline bool wasm_validate_ptr(const void *ptr, uint32_t size)
+{
+	return wasm_runtime_validate_native_addr(wasm.module_inst, (void *) ptr, size);
 }
 
 // Address relative to wasm heap.
@@ -165,6 +165,16 @@ struct wasm_edict_t
 // wnp: wasm native pointer (wasm_edict_t*, absolute from WASM heap)
 // wa: wasm address (uint32_t, relative offset from WASM heap)
 
+static inline edict_t *entity_number_to_np(int32_t number)
+{
+	return &globals.edicts[number];
+}
+
+static inline wasm_entity_address_t entity_number_to_wa(int32_t number)
+{
+	return wasm.edict_base + (number * wasm.edict_size);
+}
+
 static inline int32_t entity_wa_to_number(wasm_entity_address_t edict_offset)
 {
 	return (edict_offset - wasm.edict_base) / wasm.edict_size;
@@ -178,11 +188,6 @@ static inline wasm_entity_address_t entity_wnp_to_wa(wasm_edict_t *wasm_edict)
 static inline int32_t entity_wnp_to_number(wasm_edict_t *wasm_edict)
 {
 	return entity_wa_to_number(entity_wnp_to_wa(wasm_edict));
-}
-
-static inline wasm_entity_address_t entity_number_to_wa(int32_t number)
-{
-	return wasm.edict_base + (number * wasm.edict_size);
 }
 
 inline wasm_edict_t *entity_wa_to_wnp(wasm_entity_address_t e)
@@ -202,12 +207,18 @@ static inline wasm_entity_address_t entity_np_to_wa(edict_t *e)
 
 inline edict_t *entity_wnp_to_np(wasm_edict_t *e)
 {
-	return wasm_native_to_addr(e) ? native_entity(entity_wnp_to_number(e)) : NULL;
+	return wasm_native_to_addr(e) ? entity_number_to_np(entity_wnp_to_number(e)) : NULL;
 }
 
 inline edict_t *entity_wa_to_np(wasm_entity_address_t e)
 {
-	return e ? native_entity(entity_wa_to_number(e)) : NULL;
+	return e ? entity_number_to_np(entity_wa_to_number(e)) : NULL;
+}
+
+static inline bool entity_validate_wnp(wasm_edict_t *e)
+{
+	wasm_app_address_t addr = wasm_native_to_addr(e);
+	return addr == 0 || (addr >= wasm.edict_base && addr < wasm.edict_end && (wasm_native_to_addr(e) - wasm.edict_base) % wasm.edict_size == 0);
 }
 
 static inline void copy_link_wasm_to_native(edict_t *native_edict, const wasm_edict_t *wasm_edict)
@@ -233,6 +244,7 @@ static inline void copy_link_native_to_wasm(wasm_edict_t *wasm_edict, const edic
 	wasm_edict->absmax = native_edict->absmax;
 	wasm_edict->size = native_edict->size;
 	wasm_edict->s.solid = native_edict->s.solid;
+	wasm_edict->linkcount = native_edict->linkcount;
 }
 
 static inline void copy_frame_native_to_wasm(wasm_edict_t *wasm_edict, const edict_t *native_edict)
@@ -247,10 +259,12 @@ static inline bool should_sync_entity(const wasm_edict_t *wasm_edict, const edic
 		wasm_edict->inuse);
 }
 
-static inline void sync_entity(wasm_edict_t *wasm_edict, edict_t *native)
+static inline void sync_entity(wasm_edict_t *wasm_edict, edict_t *native, bool force)
 {
+	native->s.renderfx |= 64;
+
 	// Don't bother syncing non-inuse entities.
-	if (!should_sync_entity(wasm_edict, native))
+	if (!force && !should_sync_entity(wasm_edict, native))
 		return;
 
 	// sync main data
@@ -258,10 +272,6 @@ static inline void sync_entity(wasm_edict_t *wasm_edict, edict_t *native)
 
 	// fill owner pointer
 	native->owner = entity_wa_to_np(wasm_edict->owner);
-	
-	// sync owner
-	if (native->owner)
-		sync_entity(entity_wa_to_wnp(wasm_edict->owner), native->owner);
 
 	// sync client structure, if it exists
 	if (wasm_edict->client)

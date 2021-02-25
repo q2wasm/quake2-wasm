@@ -42,6 +42,7 @@ game_export_t globals;
 wasm_env_t wasm;
 char mod_directory[64];
 char base_directory[260];
+static int32_t max_clients;
 
 static bool wasm_attempt_assembly_load(const char *file)
 {
@@ -111,8 +112,6 @@ static void InitGame(void)
 		!wasm_attempt_assembly_load("game.wasm"))
 		gi.error("Unable to load game.aot or game.wasm");
 
-	//wasm_runtime_set_wasi_args(wasm.wasm_module, dirs, sizeof(dirs) / sizeof(*dirs), NULL, 0, NULL, 0, NULL, 0);
-
 	/* create an instance of the WASM module (WASM linear memory is ready) */
 	wasm.module_inst = wasm_runtime_instantiate(wasm.wasm_module, stack_size, heap_size, wasm.error_buf, sizeof(wasm.error_buf));
 
@@ -158,13 +157,14 @@ static void InitGame(void)
 
 	wasm_call(wasm.WASM_Init);
 
-	if (!wasm_runtime_validate_native_addr(wasm.module_inst, api_ptr, sizeof(int32_t) * 4))
+	if (!wasm_validate_ptr(api_ptr, sizeof(int32_t) * 4))
 		gi.error("InitWASMAPI returned invalid memory\n");
 
 	wasm.edict_base = ((uint32_t *)api_ptr)[0];
 	wasm.edict_size = ((uint32_t *)api_ptr)[1];
 	wasm.num_edicts = &((int32_t *)api_ptr)[2];
 	wasm.max_edicts = ((uint32_t *)api_ptr)[3];
+	wasm.edict_end = wasm.edict_base + (wasm.edict_size * wasm.max_edicts);
 	
 	wasm.ucmd_ptr = wasm_runtime_module_malloc(wasm.module_inst, sizeof(usercmd_t), (void **) &wasm.ucmd_buf);
 	wasm.userinfo_ptr = wasm_runtime_module_malloc(wasm.module_inst, MAX_INFO_STRING + 1, (void **) &wasm.userinfo_buf);
@@ -194,13 +194,17 @@ static void InitGame(void)
 	gi.cvar_forceset("g_features", new_features);
 }
 
+#include <algorithm>
+
 // copies all of the command buffer data into WASM heap
 static void setup_args()
 {
-	const int32_t n = gi.argc();
+	const int32_t n = std::min((sizeof(wasm.cmd_bufs) / sizeof(*wasm.cmd_bufs)) - 1, (uint32_t) gi.argc());
+	int32_t i;
 
-	for (int32_t i = 0; i < n; i++)
+	for (i = 0; i < n; i++)
 		strlcpy(wasm.cmd_bufs[i], gi.argv(i), MAX_INFO_STRING / 8);
+	*wasm.cmd_bufs[i] = 0;
 	strlcpy(wasm.scmd_buf, gi.args(), MAX_INFO_STRING);
 }
 
@@ -238,6 +242,16 @@ static void SpawnEntities(const char *mapname, const char *entities, const char 
 	};
 
 	wasm_call(wasm.WASM_SpawnEntities, args);
+
+	globals.num_edicts = *wasm.num_edicts;
+
+	for (int32_t i = 0; i < globals.num_edicts; i++)
+	{
+		wasm_edict_t *e = entity_number_to_wnp(i);
+		edict_t *n = &globals.edicts[i];
+
+		sync_entity(e, n, true);
+	}
 }
 
 static qboolean ClientConnect(edict_t *e, char *userinfo)
@@ -258,7 +272,7 @@ static qboolean ClientConnect(edict_t *e, char *userinfo)
 
 	strlcpy(userinfo, wasm.userinfo_buf, MAX_INFO_STRING);
 
-	sync_entity(wasm_edict, e);
+	sync_entity(wasm_edict, e, true);
 
 	return (qboolean) args[0];
 }
@@ -276,7 +290,7 @@ static void ClientBegin(edict_t *e)
 
 	wasm_call(wasm.WASM_ClientBegin, args);
 
-	sync_entity(wasm_edict, e);
+	sync_entity(wasm_edict, e, true);
 }
 
 static void ClientUserinfoChanged(edict_t *e, char *userinfo)
@@ -297,7 +311,7 @@ static void ClientUserinfoChanged(edict_t *e, char *userinfo)
 
 	strlcpy(userinfo, wasm.userinfo_buf, MAX_INFO_STRING);
 
-	sync_entity(wasm_edict, e);
+	sync_entity(wasm_edict, e, true);
 }
 
 static void ClientDisconnect(edict_t *e)
@@ -313,7 +327,7 @@ static void ClientDisconnect(edict_t *e)
 
 	wasm_call(wasm.WASM_ClientDisconnect, args);
 
-	sync_entity(wasm_edict, e);
+	sync_entity(wasm_edict, e, true);
 }
 
 static void ClientCommand(edict_t *e)
@@ -355,18 +369,16 @@ static void ClientThink(edict_t *e, usercmd_t *ucmd)
 		wasm_edict_t *we = entity_number_to_wnp(i);
 		edict_t *n = &globals.edicts[i];
 
-		sync_entity(we, n);
+		sync_entity(we, n, false);
 	}
 }
 
 #include <chrono>
 
-static std::chrono::high_resolution_clock hc;
-
 static void RunFrame(void)
 {	
 	for (int32_t i = 0; i < globals.num_edicts; i++)
-		copy_frame_native_to_wasm(entity_number_to_wnp(i), native_entity(i));
+		copy_frame_native_to_wasm(entity_number_to_wnp(i), entity_number_to_np(i));
 
 	wasm_call(wasm.WASM_RunFrame);
 
@@ -377,7 +389,7 @@ static void RunFrame(void)
 		wasm_edict_t *e = entity_number_to_wnp(i);
 		edict_t *n = &globals.edicts[i];
 
-		sync_entity(e, n);
+		sync_entity(e, n, false);
 	}
 }
 
@@ -435,12 +447,42 @@ static void ReadGame(const char *filename)
 	{
 		wasm_edict_t *e = entity_number_to_wnp(i);
 		edict_t *n = &globals.edicts[i];
-		sync_entity(e, n);
+		sync_entity(e, n, true);
 	}
 }
 
 static void WriteLevel(const char *filename)
 {
+	// autosaves have a weird setup where they clear inuse,
+	// then restore them after writing the level. We have no way of
+	// knowing here if this is an autosave or not, but we can infer
+	// by checking if any of the native clients had their inuse set.
+	// A /save command will have their inuse intact, but an autosave
+	// will have all of them set to false.
+	std::vector<bool> b;
+	bool is_autosave = true;
+
+	for (int32_t i = 0; i < max_clients; i++)
+	{
+		edict_t *e = entity_number_to_np(i + 1);
+
+		if (e->inuse)
+		{
+			is_autosave = false;
+			break;
+		}
+	}
+
+	if (is_autosave)
+	{
+		for (int32_t i = 0; i < max_clients; i++)
+		{
+			wasm_edict_t *e = entity_number_to_wnp(i + 1);
+			b.push_back(e->inuse);
+			e->inuse = qfalse;
+		}
+	}
+
 	strlcpy(wasm.userinfo_buf, get_relative_file(filename).c_str(), MAX_INFO_STRING);
 
 	uint32_t args[] = {
@@ -448,6 +490,15 @@ static void WriteLevel(const char *filename)
 	};
 
 	wasm_call(wasm.WASM_WriteLevel, args);
+	
+	if (is_autosave)
+	{
+		for (int32_t i = 0; i < max_clients; i++)
+		{
+			wasm_edict_t *e = entity_number_to_wnp(i + 1);
+			e->inuse = b[i] ? qtrue : qfalse;
+		}
+	}
 }
 
 static void ReadLevel(const char *filename)
@@ -466,7 +517,7 @@ static void ReadLevel(const char *filename)
 	{
 		wasm_edict_t *e = entity_number_to_wnp(i);
 		edict_t *n = &globals.edicts[i];
-		sync_entity(e, n);
+		sync_entity(e, n, true);
 	}
 }
 
@@ -483,6 +534,7 @@ extern "C" game_export_t *GetGameAPI (game_import_t *import)
 	gi = *import;
 
 	const int32_t max_edicts = (int32_t)gi.cvar("maxentities", "1024", CVAR_LATCH)->value;
+	max_clients = (int32_t)gi.cvar("maxclients", "8", CVAR_LATCH)->value;
 
 	globals = {
 		.apiversion = 3,
@@ -511,7 +563,7 @@ extern "C" game_export_t *GetGameAPI (game_import_t *import)
 		
 		.edicts = (edict_t *)gi.TagMalloc(sizeof(edict_t) * max_edicts, TAG_GAME),
 		.edict_size = sizeof(edict_t),
-		.num_edicts = (int32_t)gi.cvar("maxclients", "8", CVAR_LATCH)->value + 1,
+		.num_edicts = max_clients + 1,
 		.max_edicts = max_edicts
 	};
 
