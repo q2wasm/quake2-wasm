@@ -93,7 +93,7 @@ DECLARE_IMPORT(void, DebugGraph, vec_t, int32_t);
 	function pointers, we have to wrap the functions and call them
 	using a different method. */
 static game_import_t _gi;
-static game_export_t *_ge;
+static volatile game_export_t *_ge;
 
 extern game_export_t *GetGameAPI (game_import_t *import);
 
