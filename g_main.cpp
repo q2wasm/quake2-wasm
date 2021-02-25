@@ -87,7 +87,7 @@ is loaded.
 */
 static void InitGame(void)
 {
-	const uint32_t stack_size = (1024 * 1024) * 2, heap_size = (1024 * 1024) * 16;
+	const uint32_t stack_size = 1024 * 1024, heap_size = 33554432;
 
 	cvar_t *game_cvar = gi.cvar("game", "", 0);
 
@@ -122,6 +122,13 @@ static void InitGame(void)
 
 	if (!wasm.exec_env)
 		gi.error("Unable to create WASM execution environment: %s\n", wasm_runtime_get_exception(wasm.module_inst));
+	
+	wasm_function_inst_t start_func = wasm_runtime_lookup_function(wasm.module_inst, "_initialize", NULL);
+
+	if (!start_func)
+		gi.error("Unable to find _initialize function\n");
+
+	wasm_call(start_func);
 
 #define LOAD_FUNC(name, sig) \
 	wasm.name = wasm_runtime_lookup_function(wasm.module_inst, #name, sig)
@@ -143,10 +150,6 @@ static void InitGame(void)
 	LOAD_FUNC(WASM_ReadGame, "($)");
 	LOAD_FUNC(WASM_WriteLevel, "($)");
 	LOAD_FUNC(WASM_ReadLevel, "($)");
-
-	wasm_function_inst_t start_func = wasm_runtime_lookup_function(wasm.module_inst, "_start", NULL);
-
-	wasm_call(start_func);
 
 	uint32_t args[1];
 
