@@ -221,7 +221,7 @@ static trace_t _trace(const vec3_t *start, const vec3_t *mins, const vec3_t *max
 	return tr;
 }
 
-void *InitWASMAPI(void) __WASM_EXPORT__(InitWASMAPI)
+void InitWASMAPI(edict_t ***edicts, int32_t **edict_size, int32_t **num_edicts, int32_t **max_edicts) __WASM_EXPORT__(InitWASMAPI)
 {
 	_gi.bprintf = _bprintf;
 	_gi.dprintf = _dprintf;
@@ -282,7 +282,10 @@ void *InitWASMAPI(void) __WASM_EXPORT__(InitWASMAPI)
 
 	_ge = GetGameAPI(&_gi);
 
-	return &_ge->edicts;
+	*edicts = &_ge->edicts;
+	*edict_size = &_ge->edict_size;
+	*num_edicts = &_ge->num_edicts;
+	*max_edicts = &_ge->max_edicts;
 }
 
 #endif
