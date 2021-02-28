@@ -177,9 +177,10 @@ void WASM_ReadLevel(const char *filename) __WASM_EXPORT__(WASM_ReadLevel)
 	_ge->ReadLevel(filename);
 }
 
+static char	string[1024];
+
 #define PARSE_VAR_ARGS \
 	va_list argptr; \
-	static char	string[1024]; \
 	va_start (argptr, format); \
 	vsnprintf (string, sizeof(string), format, argptr); \
 	va_end (argptr)

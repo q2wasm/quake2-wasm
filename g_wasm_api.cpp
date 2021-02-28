@@ -113,7 +113,7 @@ static std::unordered_map<wasm_surface_address_t, csurface_t*> wasm_surf_to_nati
 // A pointer to the currently-processing pmove.
 static wasm_pmove_t *wasm_pmove_ptr;
 
-static void q2_dprint(wasm_exec_env_t, const char *str)
+static void q2_dprint(wasm_exec_env_t env, const char *str)
 {
 	gi.dprintf("%s", str);
 }
@@ -125,7 +125,7 @@ static void q2_bprint(wasm_exec_env_t, print_level_t print_level, const char *st
 
 static uint32_t q2_cvar(wasm_exec_env_t, const char *name, const char *value, const int32_t flags)
 {
-	auto mapped = fetch_mapped_cvar(name);
+	auto &mapped = fetch_mapped_cvar(name);
 
 	if (!mapped.native)
 	{
@@ -145,7 +145,7 @@ static uint32_t q2_cvar(wasm_exec_env_t, const char *name, const char *value, co
 
 static uint32_t q2_cvar_set(wasm_exec_env_t, const char *name, const char *value)
 {
-	auto mapped = fetch_mapped_cvar(name);
+	auto &mapped = fetch_mapped_cvar(name);
 
 	if (!mapped.native)
 	{
@@ -165,7 +165,7 @@ static uint32_t q2_cvar_set(wasm_exec_env_t, const char *name, const char *value
 
 static uint32_t q2_cvar_forceset(wasm_exec_env_t, const char *name, const char *value)
 {
-	auto mapped = fetch_mapped_cvar(name);
+	auto &mapped = fetch_mapped_cvar(name);
 
 	if (!mapped.native)
 	{
@@ -415,6 +415,7 @@ void q2_wasm_clear_surface_cache()
 {
 	native_surf_to_wasm_surf.clear();
 	wasm_surf_to_native_surf.clear();
+	mapped_cvars.clear();
 }
 
 static trace_t q2_wasm_pmove_trace(const vec3_t *start, const vec3_t *mins, const vec3_t *maxs, const vec3_t *end)
@@ -682,6 +683,10 @@ static void q2_SetAreaPortalState(wasm_exec_env_t, int32_t portal, qboolean stat
 	gi.SetAreaPortalState(portal, state);
 }
 
+static void q2_DebugGraph(wasm_exec_env_t, vec_t a, int32_t b)
+{
+}
+
 #define SYMBOL(name, sig) \
 	{ #name, (void *) q2_ ## name, sig, nullptr }
 
@@ -728,7 +733,8 @@ static NativeSymbol native_symbols[] = {
 	SYMBOL(AreasConnected, "(ii)i"),
 	SYMBOL(inPHS, "(**)i"),
 	SYMBOL(inPVS, "(**)i"),
-	SYMBOL(SetAreaPortalState, "(ii)")
+	SYMBOL(SetAreaPortalState, "(ii)"),
+	SYMBOL(DebugGraph, "(fi)")
 };
 
 int32_t RegisterApiNatives()

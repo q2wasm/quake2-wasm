@@ -30,6 +30,8 @@ extern "C"
 
 #include "g_wasm.hh"
 
+#include <algorithm>
+
 #if defined(_WIN32)
 inline int32_t strlcpy(char *const dest, const char *src, const size_t len)
 {
@@ -76,6 +78,22 @@ static bool wasm_attempt_assembly_load(const char *file)
 	return true;
 }
 
+static void pre_sync_entities(void)
+{
+	for (int32_t i = 0; i < globals.num_edicts; i++)
+		copy_frame_native_to_wasm(entity_number_to_wnp(i), entity_number_to_np(i));
+}
+
+static void post_sync_entities(void)
+{
+	const int32_t num_sync = std::max(globals.num_edicts, *wasm.num_edicts);
+
+	globals.num_edicts = *wasm.num_edicts;
+
+	for (int32_t i = 0; i < globals.num_edicts; i++)
+		sync_entity(entity_number_to_wnp(i), entity_number_to_np(i), false);
+}
+
 /*
 ============
 InitGame
@@ -87,7 +105,7 @@ is loaded.
 */
 static void InitGame(void)
 {
-	const uint32_t stack_size = 1024 * 1024, heap_size = 1024 * 1024 * 16;
+	const uint32_t stack_size = 8388608, heap_size = 33554432 * 3;
 
 	cvar_t *game_cvar = gi.cvar("game", "", 0);
 
@@ -101,9 +119,6 @@ static void InitGame(void)
 	/* initialize the wasm runtime by default configurations */
 	wasm_runtime_init();
 
-	if (!RegisterWasiNatives())
-		wasm_error("Unable to initialize WASI natives");
-
 	if (!RegisterApiNatives())
 		wasm_error("Unable to initialize API natives");
 
@@ -111,6 +126,12 @@ static void InitGame(void)
 	if (!wasm_attempt_assembly_load("game.aot") &&
 		!wasm_attempt_assembly_load("game.wasm"))
 		wasm_error("Unable to load game.aot or game.wasm");
+
+	static const char *dir_list[] = {
+		mod_directory
+	};
+
+	wasm_runtime_set_wasi_args(wasm.wasm_module, dir_list, sizeof(dir_list) / sizeof(*dir_list), NULL, 0, NULL, 0, NULL, 0);
 
 	/* create an instance of the WASM module (WASM linear memory is ready) */
 	wasm.module_inst = wasm_runtime_instantiate(wasm.wasm_module, 1024 * 8, heap_size, wasm.error_buf, sizeof(wasm.error_buf));
@@ -152,8 +173,7 @@ static void InitGame(void)
 	LOAD_FUNC(WASM_ReadLevel, "($)");
 
 	// allocate a bit of space to be used to store some stuff by InitWASMAPI
-	uint32_t *scratch_buf;
-	uint32_t scratch_ptr = wasm_runtime_module_malloc(wasm.module_inst, sizeof(uint32_t) * 4, (void **) &scratch_buf);
+	uint32_t scratch_ptr = wasm_runtime_module_malloc(wasm.module_inst, sizeof(uint32_t) * 4, NULL);
 
 	uint32_t args[4] = {
 		scratch_ptr,
@@ -166,6 +186,8 @@ static void InitGame(void)
 
 	wasm_call(wasm.WASM_Init);
 
+	uint32_t *scratch_buf = (uint32_t *) wasm_runtime_addr_app_to_native(wasm.module_inst, scratch_ptr);
+
 	if (!wasm_validate_addr(scratch_buf[1], sizeof(int32_t)) ||
 		!wasm_validate_addr(scratch_buf[2], sizeof(int32_t)) ||
 		!wasm_validate_addr(scratch_buf[3], sizeof(int32_t)))
@@ -175,6 +197,9 @@ static void InitGame(void)
 	wasm.edict_size = *((int32_t *)wasm_addr_to_native(scratch_buf[1]));
 	wasm.max_edicts = *((int32_t *)wasm_addr_to_native(scratch_buf[3]));
 	wasm.edict_base = *((wasm_app_address_t *)wasm_addr_to_native(scratch_buf[0]));
+
+	if (!wasm.edict_size || !wasm.max_edicts)
+		wasm_error("WASM_Init set invalid edict_size/max_edicts");
 
 	if (!wasm_runtime_validate_app_addr(wasm.module_inst, wasm.edict_base, wasm.edict_size * wasm.max_edicts))
 		wasm_error("InitWASMAPI returned invalid memory");
@@ -209,9 +234,9 @@ static void InitGame(void)
 	cvar_t *g_features = gi.cvar("g_features", "0", 0);
 	snprintf(new_features, sizeof(new_features), "%i", (int32_t)g_features->value | GMF_ENHANCED_SAVEGAMES);
 	gi.cvar_forceset("g_features", new_features);
-}
 
-#include <algorithm>
+	post_sync_entities();
+}
 
 // copies all of the command buffer data into WASM heap
 static void setup_args()
@@ -260,15 +285,7 @@ static void SpawnEntities(const char *mapname, const char *entities, const char 
 
 	wasm_call(wasm.WASM_SpawnEntities, args);
 
-	globals.num_edicts = *wasm.num_edicts;
-
-	for (int32_t i = 0; i < globals.num_edicts; i++)
-	{
-		wasm_edict_t *e = entity_number_to_wnp(i);
-		edict_t *n = &globals.edicts[i];
-
-		sync_entity(e, n, true);
-	}
+	post_sync_entities();
 }
 
 static qboolean ClientConnect(edict_t *e, char *userinfo)
@@ -276,20 +293,19 @@ static qboolean ClientConnect(edict_t *e, char *userinfo)
 	strlcpy(wasm.userinfo_buf, userinfo, MAX_INFO_STRING * 2);
 
 	uint32_t edict_offset = entity_np_to_wa(e);
-	wasm_edict_t *wasm_edict = entity_wa_to_wnp(edict_offset);
-
-	wasm_edict->s.number = e->s.number;
 
 	uint32_t args[] = {
 		edict_offset,
 		wasm.userinfo_ptr
 	};
 
+	pre_sync_entities();
+
 	wasm_call(wasm.WASM_ClientConnect, args);
 
 	strlcpy(userinfo, wasm.userinfo_buf, MAX_INFO_STRING);
 
-	sync_entity(wasm_edict, e, true);
+	post_sync_entities();
 
 	return (qboolean) args[0];
 }
@@ -297,17 +313,16 @@ static qboolean ClientConnect(edict_t *e, char *userinfo)
 static void ClientBegin(edict_t *e)
 {
 	uint32_t edict_offset = entity_np_to_wa(e);
-	wasm_edict_t *wasm_edict = entity_wa_to_wnp(edict_offset);
-
-	wasm_edict->s.number = e->s.number;
 
 	uint32_t args[] = {
 		edict_offset
 	};
 
+	pre_sync_entities();
+
 	wasm_call(wasm.WASM_ClientBegin, args);
 
-	sync_entity(wasm_edict, e, true);
+	post_sync_entities();
 }
 
 static void ClientUserinfoChanged(edict_t *e, char *userinfo)
@@ -315,36 +330,34 @@ static void ClientUserinfoChanged(edict_t *e, char *userinfo)
 	strlcpy(wasm.userinfo_buf, userinfo, MAX_INFO_STRING * 2);
 
 	uint32_t edict_offset = entity_np_to_wa(e);
-	wasm_edict_t *wasm_edict = entity_wa_to_wnp(edict_offset);
-
-	wasm_edict->s.number = e->s.number;
 
 	uint32_t args[] = {
 		edict_offset,
 		wasm.userinfo_ptr
 	};
 
+	pre_sync_entities();
+
 	wasm_call(wasm.WASM_ClientUserinfoChanged, args);
 
 	strlcpy(userinfo, wasm.userinfo_buf, MAX_INFO_STRING);
 
-	sync_entity(wasm_edict, e, true);
+	post_sync_entities();
 }
 
 static void ClientDisconnect(edict_t *e)
 {
 	uint32_t edict_offset = entity_np_to_wa(e);
-	wasm_edict_t *wasm_edict = entity_wa_to_wnp(edict_offset);
-
-	wasm_edict->s.number = e->s.number;
 
 	uint32_t args[] = {
 		edict_offset
 	};
+	
+	pre_sync_entities();
 
 	wasm_call(wasm.WASM_ClientDisconnect, args);
 
-	sync_entity(wasm_edict, e, true);
+	post_sync_entities();
 }
 
 static void ClientCommand(edict_t *e)
@@ -352,27 +365,25 @@ static void ClientCommand(edict_t *e)
 	setup_args();
 
 	uint32_t edict_offset = entity_np_to_wa(e);
-	wasm_edict_t *wasm_edict = entity_wa_to_wnp(edict_offset);
-
-	wasm_edict->s.number = e->s.number;
 
 	uint32_t args[] = {
 		edict_offset
 	};
+	
+	pre_sync_entities();
 
 	wasm_call(wasm.WASM_ClientCommand, args);
+
+	post_sync_entities();
 }
 
 static void ClientThink(edict_t *e, usercmd_t *ucmd)
 {
 	uint32_t edict_offset = entity_np_to_wa(e);
-	wasm_edict_t *wasm_edict = entity_wa_to_wnp(edict_offset);
-
-	wasm_edict->s.number = e->s.number;
 
 	memcpy(wasm.ucmd_buf, ucmd, sizeof(usercmd_t));
-
-	copy_frame_native_to_wasm(wasm_edict, e);
+	
+	pre_sync_entities();
 
 	uint32_t args[] = {
 		edict_offset,
@@ -380,40 +391,28 @@ static void ClientThink(edict_t *e, usercmd_t *ucmd)
 	};
 
 	wasm_call(wasm.WASM_ClientThink, args);
-	
-	for (int32_t i = 0; i < globals.num_edicts; i++)
-	{
-		wasm_edict_t *we = entity_number_to_wnp(i);
-		edict_t *n = &globals.edicts[i];
 
-		sync_entity(we, n, false);
-	}
+	post_sync_entities();
 }
 
-#include <chrono>
-
 static void RunFrame(void)
-{	
-	for (int32_t i = 0; i < globals.num_edicts; i++)
-		copy_frame_native_to_wasm(entity_number_to_wnp(i), entity_number_to_np(i));
+{
+	pre_sync_entities();
 
 	wasm_call(wasm.WASM_RunFrame);
 
-	globals.num_edicts = *wasm.num_edicts;
-
-	for (int32_t i = 0; i < globals.num_edicts; i++)
-	{
-		wasm_edict_t *e = entity_number_to_wnp(i);
-		edict_t *n = &globals.edicts[i];
-
-		sync_entity(e, n, false);
-	}
+	post_sync_entities();
 }
 
 static void ServerCommand(void)
 {
 	setup_args();
+
+	pre_sync_entities();
+
 	wasm_call(wasm.WASM_ServerCommand);
+
+	post_sync_entities();
 }
 
 #include <filesystem>
@@ -458,14 +457,7 @@ static void ReadGame(const char *filename)
 
 	wasm_call(wasm.WASM_ReadGame, args);
 
-	globals.num_edicts = *wasm.num_edicts;
-
-	for (int32_t i = 0; i < globals.num_edicts; i++)
-	{
-		wasm_edict_t *e = entity_number_to_wnp(i);
-		edict_t *n = &globals.edicts[i];
-		sync_entity(e, n, true);
-	}
+	post_sync_entities();
 }
 
 static void WriteLevel(const char *filename)
@@ -528,14 +520,7 @@ static void ReadLevel(const char *filename)
 
 	wasm_call(wasm.WASM_ReadLevel, args);
 
-	globals.num_edicts = *wasm.num_edicts;
-
-	for (int32_t i = 0; i < globals.num_edicts; i++)
-	{
-		wasm_edict_t *e = entity_number_to_wnp(i);
-		edict_t *n = &globals.edicts[i];
-		sync_entity(e, n, true);
-	}
+	post_sync_entities();
 }
 
 /*

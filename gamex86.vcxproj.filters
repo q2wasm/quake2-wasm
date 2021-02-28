@@ -24,9 +24,6 @@
     <ClCompile Include="g_wasm_api.cpp">
       <Filter>src</Filter>
     </ClCompile>
-    <ClCompile Include="g_wasm_wasi.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
     <ClCompile Include="game\wasm.c">
       <Filter>inc\game</Filter>
     </ClCompile>

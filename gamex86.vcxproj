@@ -330,7 +330,7 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <ModuleDefinitionFile>game.def</ModuleDefinitionFile>
-      <AdditionalDependencies>vmlib.lib;uv_a.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>vmlib.lib;uv_a.lib;Ws2_32.lib;psapi.lib;Iphlpapi.lib;Userenv.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers>
       <GenerateDebugInformation>DebugFull</GenerateDebugInformation>
     </Link>
@@ -420,7 +420,6 @@
     <ClCompile Include="game\wasm.c" />
     <ClCompile Include="g_main.cpp" />
     <ClCompile Include="g_wasm_api.cpp" />
-    <ClCompile Include="g_wasm_wasi.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="game\api.h" />

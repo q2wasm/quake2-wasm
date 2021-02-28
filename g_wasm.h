@@ -254,6 +254,7 @@ static inline void copy_link_native_to_wasm(wasm_edict_t *wasm_edict, const edic
 
 static inline void copy_frame_native_to_wasm(wasm_edict_t *wasm_edict, const edict_t *native_edict)
 {
+	wasm_edict->s.number = native_edict->s.number;
 	wasm_edict->s.event = native_edict->s.event;
 }
 
@@ -266,8 +267,6 @@ static inline bool should_sync_entity(const wasm_edict_t *wasm_edict, const edic
 
 static inline void sync_entity(wasm_edict_t *wasm_edict, edict_t *native, bool force)
 {
-	native->s.renderfx |= 64;
-
 	// Don't bother syncing non-inuse entities.
 	if (!force && !should_sync_entity(wasm_edict, native))
 		return;
@@ -327,5 +326,4 @@ typedef struct
 
 void q2_wasm_clear_surface_cache(void);
 
-int32_t RegisterWasiNatives(void);
 int32_t RegisterApiNatives(void);
