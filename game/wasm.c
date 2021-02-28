@@ -95,7 +95,7 @@ DECLARE_IMPORT(void, DebugGraph, vec_t, int32_t);
 static game_import_t _gi;
 static volatile game_export_t *_ge;
 
-extern game_export_t *GetGameAPI (game_import_t *import);
+extern volatile game_export_t *GetGameAPI (game_import_t *import);
 
 void WASM_Init(void) __WASM_EXPORT__(WASM_Init)
 {
