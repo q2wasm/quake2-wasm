@@ -127,14 +127,14 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Vanilla Debug|Win32'">
     <OutDir>$(SolutionDir)..\</OutDir>
     <CodeAnalysisRuleSet>MixedMinimumRules.ruleset</CodeAnalysisRuleSet>
-    <IncludePath>./;windows/;../wasm-micro-runtime/core/iwasm/include/;$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
+    <IncludePath>../wasm-micro-runtime/core/iwasm/include/;$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
     <TargetName>$(ProjectName)86</TargetName>
     <IntDir>obj\$(Configuration)\</IntDir>
     <LibraryPath>../wasm-micro-runtime/product-mini/platforms/windows/build/Debug/;$(VC_LibraryPath_x86);$(WindowsSDK_LibraryPath_x86);../wasm-micro-runtime/product-mini/platforms/windows/build/_deps/libuv-build/Debug</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Vanilla Debug|x64'">
     <CodeAnalysisRuleSet>MixedMinimumRules.ruleset</CodeAnalysisRuleSet>
-    <IncludePath>./;windows/;../wasm-micro-runtime/core/iwasm/include/;$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
+    <IncludePath>../wasm-micro-runtime/core/iwasm/include/;$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
     <TargetName>$(ProjectName)86_x64</TargetName>
     <OutDir>$(SolutionDir)..\</OutDir>
     <IntDir>obj\$(Platform)\$(Configuration)\</IntDir>
@@ -143,14 +143,14 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='KMQuake2 Debug|Win32'">
     <OutDir>$(SolutionDir)..\</OutDir>
     <CodeAnalysisRuleSet>MixedMinimumRules.ruleset</CodeAnalysisRuleSet>
-    <IncludePath>./;windows/;../wasm-micro-runtime/core/iwasm/include/;$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
+    <IncludePath>../wasm-micro-runtime/core/iwasm/include/;$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
     <TargetName>kmq2$(ProjectName)86</TargetName>
     <IntDir>obj\$(Configuration)\</IntDir>
     <LibraryPath>../wasm-micro-runtime/product-mini/platforms/windows/build/Release/;$(VC_LibraryPath_x86);$(WindowsSDK_LibraryPath_x86)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='KMQuake2 Debug|x64'">
     <CodeAnalysisRuleSet>MixedMinimumRules.ruleset</CodeAnalysisRuleSet>
-    <IncludePath>./;windows/;../wasm-micro-runtime/core/iwasm/include/;$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
+    <IncludePath>../wasm-micro-runtime/core/iwasm/include/;$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
     <TargetName>kmq2$(ProjectName)64</TargetName>
     <OutDir>$(SolutionDir)..\</OutDir>
     <IntDir>obj\$(Platform)\$(Configuration)\</IntDir>
@@ -159,14 +159,14 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Vanilla Release|Win32'">
     <OutDir>$(SolutionDir)..\</OutDir>
     <CodeAnalysisRuleSet>MixedMinimumRules.ruleset</CodeAnalysisRuleSet>
-    <IncludePath>./;windows/;../wasm-micro-runtime/core/iwasm/include/;$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
+    <IncludePath>../wasm-micro-runtime/core/iwasm/include/;$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
     <TargetName>$(ProjectName)86</TargetName>
     <IntDir>obj\$(Configuration)\</IntDir>
     <LibraryPath>../wasm-micro-runtime/product-mini/platforms/windows/build/_deps/libuv-build/Release;../wasm-micro-runtime/product-mini/platforms/windows/build/Release/;$(VC_LibraryPath_x86);$(WindowsSDK_LibraryPath_x86)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Vanilla Release|x64'">
     <CodeAnalysisRuleSet>MixedMinimumRules.ruleset</CodeAnalysisRuleSet>
-    <IncludePath>./;windows/;../wasm-micro-runtime/core/iwasm/include/;$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
+    <IncludePath>../wasm-micro-runtime/core/iwasm/include/;$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
     <TargetName>$(ProjectName)86_x64</TargetName>
     <OutDir>$(SolutionDir)..\</OutDir>
     <IntDir>obj\$(Platform)\$(Configuration)\</IntDir>
@@ -175,14 +175,14 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='KMQuake2 Release|Win32'">
     <OutDir>$(SolutionDir)..\</OutDir>
     <CodeAnalysisRuleSet>MixedMinimumRules.ruleset</CodeAnalysisRuleSet>
-    <IncludePath>./;windows/;../wasm-micro-runtime/core/iwasm/include/;$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
+    <IncludePath>../wasm-micro-runtime/core/iwasm/include/;$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
     <TargetName>kmq2$(ProjectName)86</TargetName>
     <IntDir>obj\$(Configuration)\</IntDir>
     <LibraryPath>../wasm-micro-runtime/product-mini/platforms/windows/build/Release/;$(VC_LibraryPath_x86);$(WindowsSDK_LibraryPath_x86)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='KMQuake2 Release|x64'">
     <CodeAnalysisRuleSet>MixedMinimumRules.ruleset</CodeAnalysisRuleSet>
-    <IncludePath>./;windows/;../wasm-micro-runtime/core/iwasm/include/;$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
+    <IncludePath>../wasm-micro-runtime/core/iwasm/include/;$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
     <TargetName>kmq2$(ProjectName)64</TargetName>
     <OutDir>$(SolutionDir)..\</OutDir>
     <IntDir>obj\$(Platform)\$(Configuration)\</IntDir>

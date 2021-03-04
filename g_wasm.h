@@ -34,6 +34,33 @@ typedef struct
 	wasm_entity_address_t	ent;
 } wasm_trace_t;
 
+// WASM data that we use to communicate between ourselves.
+// The various buffers below are used to store data that we read/write to
+// to communicate to WASM, since we can't pass native pointers through.
+typedef struct
+{
+	usercmd_t		ucmd;
+	union {
+		char		userinfo[MAX_INFO_STRING];
+		char		filename[MAX_INFO_STRING];
+	};
+	vec3_t			vectors[4];
+	wasm_trace_t	trace;
+	char			cmds[16][MAX_INFO_STRING / 8];
+	char			scmd[MAX_INFO_STRING];
+	csurface_t		nullsurf;
+} wasm_buffers_t;
+
+#define GMF_CLIENTNUM               0x00000001
+#define GMF_PROPERINUSE             0x00000002
+#define GMF_MVDSPEC                 0x00000004
+#define GMF_WANT_ALL_DISCONNECTS    0x00000008
+
+#define GMF_ENHANCED_SAVEGAMES      0x00000400
+#define GMF_VARIABLE_FPS            0x00000800
+#define GMF_EXTRA_USERINFO          0x00001000
+#define GMF_IPV6_ADDRESS_AWARE      0x00002000
+
 // WASM environment data. Stored globally.
 typedef struct
 {
@@ -43,38 +70,21 @@ typedef struct
 	uint8_t *assembly;
 	char error_buf[128];
 
-	wasm_app_address_t edict_base, edict_end;
-	int32_t edict_size;
-	int32_t *num_edicts;
-	int32_t max_edicts;
+	int32_t edict_size, max_edicts;
+	wasm_app_address_t edicts, num_edicts, edict_end;
 
-	// The various buffers below are used to store data that we read/write to
-	// to communicate to WASM, since we can't pass native pointers through.
-	usercmd_t			*ucmd_buf;
-	wasm_app_address_t	ucmd_ptr;
+	int32_t g_features;
 
-	char				*userinfo_buf;
-	wasm_app_address_t	userinfo_ptr;
+	// address of type wasm_buffers_t
+	wasm_surface_address_t	buffers_addr;
 
-	// there's four vectors stored here.
-	vec3_t				*vectors_buf;
-	wasm_app_address_t	vectors_ptr;
-
-	wasm_trace_t			*trace_buf;
-	wasm_app_address_t		trace_ptr;
-
-	char				*cmd_bufs[16];
-	wasm_app_address_t	cmd_ptrs[16];
-	char				*scmd_buf;
-	wasm_app_address_t	scmd_ptr;
-
-	csurface_t				*nullsurf_buf, *nullsurf_native;
-	wasm_surface_address_t	nullsurf_ptr;
+	csurface_t	*nullsurf_native;
 
 	// Function pointers from WASM that we store.
-	wasm_function_inst_t WASM_PmoveTrace, WASM_PmovePointContents, InitWASMAPI, WASM_Init, WASM_SpawnEntities, WASM_ClientConnect,
+	wasm_function_inst_t WASM_PmoveTrace, WASM_PmovePointContents, WASM_GetGameAPI, WASM_Init, WASM_SpawnEntities, WASM_ClientConnect,
 		WASM_ClientBegin, WASM_ClientUserinfoChanged, WASM_ClientDisconnect, WASM_ClientCommand, WASM_ClientThink, WASM_RunFrame, WASM_ServerCommand,
-		WASM_WriteGame, WASM_ReadGame, WASM_WriteLevel, WASM_ReadLevel;
+		WASM_WriteGame, WASM_ReadGame, WASM_WriteLevel, WASM_ReadLevel, WASM_GetAPIVersion, WASM_GetEdicts, WASM_GetEdictSize, WASM_GetNumEdicts,
+		WASM_GetMaxEdicts;
 } wasm_env_t;
 
 extern wasm_env_t wasm;
@@ -108,6 +118,21 @@ static inline bool wasm_validate_addr(uint32_t addr, uint32_t size)
 static inline bool wasm_validate_ptr(const void *ptr, uint32_t size)
 {
 	return wasm_runtime_validate_native_addr(wasm.module_inst, (void *) ptr, size);
+}
+
+// convenient function to fetch typed buffer data
+static inline wasm_buffers_t *wasm_buffers(void)
+{
+	return (wasm_buffers_t *) wasm_addr_to_native(wasm.buffers_addr);
+}
+
+#define WASM_BUFFERS_OFFSET(n) \
+	wasm.buffers_addr + offsetof(wasm_buffers_t, n)
+
+// convenient function to fetch typed buffer data
+static inline int32_t wasm_num_edicts(void)
+{
+	return *(int32_t *) wasm_addr_to_native(wasm.num_edicts);
 }
 
 // Address relative to wasm heap.
@@ -177,12 +202,12 @@ static inline edict_t *entity_number_to_np(int32_t number)
 
 static inline wasm_entity_address_t entity_number_to_wa(int32_t number)
 {
-	return wasm.edict_base + (number * wasm.edict_size);
+	return wasm.edicts + (number * wasm.edict_size);
 }
 
 static inline int32_t entity_wa_to_number(wasm_entity_address_t edict_offset)
 {
-	return (edict_offset - wasm.edict_base) / wasm.edict_size;
+	return (edict_offset - wasm.edicts) / wasm.edict_size;
 }
 
 static inline wasm_entity_address_t entity_wnp_to_wa(wasm_edict_t *wasm_edict)
@@ -223,7 +248,7 @@ inline edict_t *entity_wa_to_np(wasm_entity_address_t e)
 static inline bool entity_validate_wnp(wasm_edict_t *e)
 {
 	wasm_app_address_t addr = wasm_native_to_addr(e);
-	return addr == 0 || (addr >= wasm.edict_base && addr < wasm.edict_end && (wasm_native_to_addr(e) - wasm.edict_base) % wasm.edict_size == 0);
+	return addr == 0 || (addr >= wasm.edicts && addr < wasm.edict_end && (wasm_native_to_addr(e) - wasm.edicts) % wasm.edict_size == 0);
 }
 
 static inline void copy_link_wasm_to_native(edict_t *native_edict, const wasm_edict_t *wasm_edict)
@@ -283,7 +308,12 @@ static inline void sync_entity(wasm_edict_t *wasm_edict, edict_t *native, bool f
 		if (!native->client)
 			native->client = (gclient_t *) gi.TagMalloc(sizeof(gclient_t), TAG_GAME);
 
-		memcpy(native->client, wasm_addr_to_native(wasm_edict->client), sizeof(gclient_t));
+		size_t client_struct_size = sizeof(gclient_t);
+
+		if (wasm.g_features & GMF_CLIENTNUM)
+			client_struct_size -= sizeof(gclient_t::clientNum);
+
+		memcpy(native->client, wasm_addr_to_native(wasm_edict->client), client_struct_size);
 	}
 	else
 	{

@@ -357,7 +357,7 @@ typedef struct
 //
 typedef struct
 {
-	int	apiversion;
+	int32_t	apiversion;
 
 	// the init function will only be called when a game starts,
 	// not each time a level is loaded.  Persistant data for clients

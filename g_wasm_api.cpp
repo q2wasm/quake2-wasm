@@ -389,7 +389,7 @@ static void q2_trace(wasm_exec_env_t, const vec3_t *start, const vec3_t *mins, c
 	if (!tr.surface || !tr.surface->name[0])
 	{
 		wasm.nullsurf_native = tr.surface;
-		out->surface = wasm.nullsurf_ptr;
+		out->surface = WASM_BUFFERS_OFFSET(nullsurf);
 		return;
 	}
 
@@ -420,47 +420,53 @@ void q2_wasm_clear_surface_cache()
 
 static trace_t q2_wasm_pmove_trace(const vec3_t *start, const vec3_t *mins, const vec3_t *maxs, const vec3_t *end)
 {
-	wasm.vectors_buf[0] = *start;
-	wasm.vectors_buf[1] = *mins;
-	wasm.vectors_buf[2] = *maxs;
-	wasm.vectors_buf[3] = *end;
+	wasm_buffers_t *buffers = wasm_buffers();
+	
+	buffers->vectors[0] = *start;
+	buffers->vectors[1] = *mins;
+	buffers->vectors[2] = *maxs;
+	buffers->vectors[3] = *end;
 
 	uint32_t args[] = {
 		wasm_native_to_addr(wasm_pmove_ptr),
-		wasm.vectors_ptr,
-		wasm.vectors_ptr + sizeof(vec3_t),
-		wasm.vectors_ptr + sizeof(vec3_t) * 2,
-		wasm.vectors_ptr + sizeof(vec3_t) * 3,
-		wasm.trace_ptr
+		WASM_BUFFERS_OFFSET(vectors[0]),
+		WASM_BUFFERS_OFFSET(vectors[1]),
+		WASM_BUFFERS_OFFSET(vectors[2]),
+		WASM_BUFFERS_OFFSET(vectors[3]),
+		WASM_BUFFERS_OFFSET(trace)
 	};
 
 	wasm_call(wasm.WASM_PmoveTrace, args);
 
+	buffers = wasm_buffers();
+	wasm_trace_t &wtr = buffers->trace;
 	static trace_t tr;
 
-	tr.allsolid = wasm.trace_buf->allsolid;
-	tr.contents = wasm.trace_buf->contents;
-	tr.endpos = wasm.trace_buf->endpos;
-	tr.ent = entity_wa_to_np(wasm.trace_buf->ent);
-	tr.fraction = wasm.trace_buf->fraction;
-	tr.plane = wasm.trace_buf->plane;
-	tr.startsolid = wasm.trace_buf->startsolid;
+	tr.allsolid = wtr.allsolid;
+	tr.contents = wtr.contents;
+	tr.endpos = wtr.endpos;
+	tr.ent = entity_wa_to_np(wtr.ent);
+	tr.fraction = wtr.fraction;
+	tr.plane = wtr.plane;
+	tr.startsolid = wtr.startsolid;
 
-	if (wasm.trace_buf->surface == wasm.nullsurf_ptr)
+	if (wtr.surface == WASM_BUFFERS_OFFSET(nullsurf))
 		tr.surface = wasm.nullsurf_native;
 	else
-		tr.surface = (*wasm_surf_to_native_surf.find(wasm.trace_buf->surface)).second;
+		tr.surface = (*wasm_surf_to_native_surf.find(wtr.surface)).second;
 
 	return tr;
 }
 
 static content_flags_t q2_wasm_pmove_pointcontents(const vec3_t *start)
 {
-	wasm.vectors_buf[0] = *start;
+	wasm_buffers_t *buffers = wasm_buffers();
+
+	buffers->vectors[0] = *start;
 
 	uint32_t args[] = {
 		wasm_native_to_addr(wasm_pmove_ptr),
-		wasm.vectors_ptr
+		WASM_BUFFERS_OFFSET(vectors[0])
 	};
 
 	wasm_call(wasm.WASM_PmovePointContents, args);
@@ -637,15 +643,15 @@ static int32_t q2_argc(wasm_exec_env_t)
 
 static uint32_t q2_argv(wasm_exec_env_t, int32_t i)
 {
-	if (i < 0 || i >= sizeof(wasm.cmd_bufs) / sizeof(*wasm.cmd_bufs))
+	if (i < 0 || i >= sizeof(wasm_buffers_t::cmds) / sizeof(*wasm_buffers_t::cmds))
 		return 0;
 
-	return wasm.cmd_ptrs[i];
+	return WASM_BUFFERS_OFFSET(cmds[i]);
 }
 
 static uint32_t q2_args(wasm_exec_env_t)
 {
-	return wasm.scmd_ptr;
+	return WASM_BUFFERS_OFFSET(scmd);
 }
 
 static void q2_AddCommandString(wasm_exec_env_t, const char *str)

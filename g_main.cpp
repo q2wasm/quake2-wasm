@@ -86,12 +86,29 @@ static void pre_sync_entities(void)
 
 static void post_sync_entities(void)
 {
-	const int32_t num_sync = std::max(globals.num_edicts, *wasm.num_edicts);
+	const int32_t wasm_num = wasm_num_edicts();
 
-	globals.num_edicts = *wasm.num_edicts;
+	const int32_t num_sync = std::max(globals.num_edicts, wasm_num);
+
+	globals.num_edicts = wasm_num;
 
 	for (int32_t i = 0; i < globals.num_edicts; i++)
 		sync_entity(entity_number_to_wnp(i), entity_number_to_np(i), false);
+}
+
+static void wasm_fetch_edict_base(void)
+{
+	uint32_t args[] = { 0 };
+
+	wasm_call(wasm.WASM_GetEdicts, args, 0);
+	wasm.edicts = args[0];
+
+	// Store edict end space, we use it for validation later
+	wasm.edict_end = wasm.edicts + (wasm.edict_size * wasm.max_edicts);
+
+	// Validate the entity space
+	if (!wasm_runtime_validate_app_addr(wasm.module_inst, wasm.edicts, wasm.edict_end - wasm.edicts))
+		wasm_error("InitWASMAPI returned invalid memory");
 }
 
 /*
@@ -154,9 +171,14 @@ static void InitGame(void)
 #define LOAD_FUNC(name, sig) \
 	wasm.name = wasm_runtime_lookup_function(wasm.module_inst, #name, sig)
 
+	LOAD_FUNC(WASM_GetAPIVersion, "()i");
+	LOAD_FUNC(WASM_GetEdicts, "()i");
+	LOAD_FUNC(WASM_GetEdictSize, "()i");
+	LOAD_FUNC(WASM_GetNumEdicts, "()i");
+	LOAD_FUNC(WASM_GetMaxEdicts, "()i");
 	LOAD_FUNC(WASM_PmoveTrace, "(******)");
 	LOAD_FUNC(WASM_PmovePointContents, "(**)");
-	LOAD_FUNC(InitWASMAPI, "(****)");
+	LOAD_FUNC(WASM_GetGameAPI, nullptr);
 	LOAD_FUNC(WASM_Init, nullptr);
 	LOAD_FUNC(WASM_SpawnEntities, "($$$)");
 	LOAD_FUNC(WASM_ClientConnect, "(*$)i");
@@ -172,53 +194,42 @@ static void InitGame(void)
 	LOAD_FUNC(WASM_WriteLevel, "($)");
 	LOAD_FUNC(WASM_ReadLevel, "($)");
 
-	// allocate a bit of space to be used to store some stuff by InitWASMAPI
-	uint32_t scratch_ptr = wasm_runtime_module_malloc(wasm.module_inst, sizeof(uint32_t) * 4, NULL);
+	// allocate buffer data we use for transferring data over to WASM
+	wasm.buffers_addr = wasm_runtime_module_malloc(wasm.module_inst, sizeof(wasm_buffers_t), NULL);
 
-	uint32_t args[4] = {
-		scratch_ptr,
-		scratch_ptr + 4,
-		scratch_ptr + 8,
-		scratch_ptr + 12
+	if (!wasm.buffers_addr)
+		wasm_error("Unable to allocate WASM buffers memory");
+
+	uint32_t args[1] = {
+		0
 	};
 
-	wasm_call(wasm.InitWASMAPI, args);
+	wasm_call(wasm.WASM_GetGameAPI);
+
+	wasm_call(wasm.WASM_GetAPIVersion, args, 0);
+
+	wasm_call(wasm.WASM_GetEdictSize, args, 0);
+	wasm.edict_size = args[0];
 
 	wasm_call(wasm.WASM_Init);
+	
+	wasm_call(wasm.WASM_GetMaxEdicts, args, 0);
+	wasm.max_edicts = args[0];
 
-	uint32_t *scratch_buf = (uint32_t *) wasm_runtime_addr_app_to_native(wasm.module_inst, scratch_ptr);
+	wasm_call(wasm.WASM_GetNumEdicts, args, 0);
+	wasm.num_edicts = args[0];
 
-	if (!wasm_validate_addr(scratch_buf[1], sizeof(int32_t)) ||
-		!wasm_validate_addr(scratch_buf[2], sizeof(int32_t)) ||
-		!wasm_validate_addr(scratch_buf[3], sizeof(int32_t)))
+	if (!wasm_validate_addr(wasm.num_edicts, sizeof(int32_t)) ||
+		!wasm.edict_size || !wasm.max_edicts)
 		wasm_error("InitWASMAPI returned invalid memory");
 
-	wasm.num_edicts = ((int32_t *)wasm_addr_to_native(scratch_buf[2]));
-	wasm.edict_size = *((int32_t *)wasm_addr_to_native(scratch_buf[1]));
-	wasm.max_edicts = *((int32_t *)wasm_addr_to_native(scratch_buf[3]));
-	wasm.edict_base = *((wasm_app_address_t *)wasm_addr_to_native(scratch_buf[0]));
-
+	// Check to be sure these are set properly.
 	if (!wasm.edict_size || !wasm.max_edicts)
 		wasm_error("WASM_Init set invalid edict_size/max_edicts");
 
-	if (!wasm_runtime_validate_app_addr(wasm.module_inst, wasm.edict_base, wasm.edict_size * wasm.max_edicts))
-		wasm_error("InitWASMAPI returned invalid memory");
+	wasm_fetch_edict_base();
 
-	wasm.edict_end = wasm.edict_base + (wasm.edict_size * wasm.max_edicts);
-
-	wasm_runtime_module_free(wasm.module_inst, scratch_ptr);
-	
-	wasm.ucmd_ptr = wasm_runtime_module_malloc(wasm.module_inst, sizeof(usercmd_t), (void **) &wasm.ucmd_buf);
-	wasm.userinfo_ptr = wasm_runtime_module_malloc(wasm.module_inst, MAX_INFO_STRING + 1, (void **) &wasm.userinfo_buf);
-	wasm.vectors_ptr = wasm_runtime_module_malloc(wasm.module_inst, sizeof(vec3_t) * 4, (void **) &wasm.vectors_buf);
-	wasm.trace_ptr = wasm_runtime_module_malloc(wasm.module_inst, sizeof(wasm_trace_t), (void **) &wasm.trace_buf);
-
-	for (int32_t i = 0; i < sizeof(wasm.cmd_bufs) / sizeof(*wasm.cmd_bufs); i++)
-		wasm.cmd_ptrs[i] = wasm_runtime_module_malloc(wasm.module_inst, MAX_INFO_STRING / 8, (void **) &wasm.cmd_bufs[i]);
-	wasm.scmd_ptr = wasm_runtime_module_malloc(wasm.module_inst, MAX_INFO_STRING, (void **) &wasm.scmd_buf);
-
-	wasm.nullsurf_ptr = wasm_runtime_module_malloc(wasm.module_inst, sizeof(csurface_t), (void **) &wasm.nullsurf_buf);
-
+	// force enhanced savegames on for q2pro.
 #define GMF_CLIENTNUM               0x00000001
 #define GMF_PROPERINUSE             0x00000002
 #define GMF_MVDSPEC                 0x00000004
@@ -229,11 +240,12 @@ static void InitGame(void)
 #define GMF_EXTRA_USERINFO          0x00001000
 #define GMF_IPV6_ADDRESS_AWARE      0x00002000
 
-	// force enhanced savegames on for q2pro.
 	char new_features[64];
 	cvar_t *g_features = gi.cvar("g_features", "0", 0);
 	snprintf(new_features, sizeof(new_features), "%i", (int32_t)g_features->value | GMF_ENHANCED_SAVEGAMES);
 	gi.cvar_forceset("g_features", new_features);
+
+	wasm.g_features = (int32_t)g_features->value;
 
 	post_sync_entities();
 }
@@ -241,13 +253,15 @@ static void InitGame(void)
 // copies all of the command buffer data into WASM heap
 static void setup_args()
 {
-	const int32_t n = std::min((sizeof(wasm.cmd_bufs) / sizeof(*wasm.cmd_bufs)) - 1, (uint32_t) gi.argc());
+	wasm_buffers_t *buffers = wasm_buffers();
+
+	const int32_t n = std::min((sizeof(buffers->cmds) / sizeof(*buffers->cmds)) - 1, (uint32_t) gi.argc());
 	int32_t i;
 
 	for (i = 0; i < n; i++)
-		strlcpy(wasm.cmd_bufs[i], gi.argv(i), MAX_INFO_STRING / 8);
-	*wasm.cmd_bufs[i] = 0;
-	strlcpy(wasm.scmd_buf, gi.args(), MAX_INFO_STRING);
+		strlcpy(buffers->cmds[i], gi.argv(i), sizeof(buffers->cmds[i]));
+	buffers->cmds[i][0] = 0;
+	strlcpy(buffers->scmd, gi.args(), sizeof(buffers->scmd));
 }
 
 static void ShutdownGame(void)
@@ -290,20 +304,24 @@ static void SpawnEntities(const char *mapname, const char *entities, const char 
 
 static qboolean ClientConnect(edict_t *e, char *userinfo)
 {
-	strlcpy(wasm.userinfo_buf, userinfo, MAX_INFO_STRING * 2);
+	wasm_buffers_t *buffers = wasm_buffers();
+
+	strlcpy(buffers->userinfo, userinfo, sizeof(buffers->userinfo));
 
 	uint32_t edict_offset = entity_np_to_wa(e);
 
 	uint32_t args[] = {
 		edict_offset,
-		wasm.userinfo_ptr
+		WASM_BUFFERS_OFFSET(userinfo)
 	};
 
 	pre_sync_entities();
 
 	wasm_call(wasm.WASM_ClientConnect, args);
 
-	strlcpy(userinfo, wasm.userinfo_buf, MAX_INFO_STRING);
+	buffers = wasm_buffers();
+
+	strlcpy(userinfo, buffers->userinfo, sizeof(buffers->userinfo));
 
 	post_sync_entities();
 
@@ -327,20 +345,24 @@ static void ClientBegin(edict_t *e)
 
 static void ClientUserinfoChanged(edict_t *e, char *userinfo)
 {
-	strlcpy(wasm.userinfo_buf, userinfo, MAX_INFO_STRING * 2);
+	wasm_buffers_t *buffers = wasm_buffers();
+
+	strlcpy(buffers->userinfo, userinfo, sizeof(buffers->userinfo));
 
 	uint32_t edict_offset = entity_np_to_wa(e);
 
 	uint32_t args[] = {
 		edict_offset,
-		wasm.userinfo_ptr
+		WASM_BUFFERS_OFFSET(userinfo)
 	};
 
 	pre_sync_entities();
 
 	wasm_call(wasm.WASM_ClientUserinfoChanged, args);
 
-	strlcpy(userinfo, wasm.userinfo_buf, MAX_INFO_STRING);
+	buffers = wasm_buffers();
+
+	strlcpy(userinfo, buffers->userinfo, sizeof(buffers->userinfo));
 
 	post_sync_entities();
 }
@@ -379,15 +401,17 @@ static void ClientCommand(edict_t *e)
 
 static void ClientThink(edict_t *e, usercmd_t *ucmd)
 {
-	uint32_t edict_offset = entity_np_to_wa(e);
+	wasm_buffers_t *buffers = wasm_buffers();
 
-	memcpy(wasm.ucmd_buf, ucmd, sizeof(usercmd_t));
+	buffers->ucmd = *ucmd;
 	
 	pre_sync_entities();
 
+	uint32_t edict_offset = entity_np_to_wa(e);
+
 	uint32_t args[] = {
 		edict_offset,
-		wasm.ucmd_ptr
+		WASM_BUFFERS_OFFSET(ucmd)
 	};
 
 	wasm_call(wasm.WASM_ClientThink, args);
@@ -437,10 +461,12 @@ std::string get_relative_file(const char *filename)
 
 static void WriteGame(const char *filename, qboolean autosave)
 {
-	strlcpy(wasm.userinfo_buf, get_relative_file(filename).c_str(), MAX_INFO_STRING);
+	wasm_buffers_t *buffers = wasm_buffers();
+
+	strlcpy(buffers->userinfo, get_relative_file(filename).c_str(), sizeof(buffers->userinfo));
 
 	uint32_t args[] = {
-		wasm.userinfo_ptr,
+		WASM_BUFFERS_OFFSET(filename),
 		(uint32_t) autosave
 	};
 
@@ -449,13 +475,17 @@ static void WriteGame(const char *filename, qboolean autosave)
 
 static void ReadGame(const char *filename)
 {
-	strlcpy(wasm.userinfo_buf, get_relative_file(filename).c_str(), MAX_INFO_STRING);
+	wasm_buffers_t *buffers = wasm_buffers();
+
+	strlcpy(buffers->userinfo, get_relative_file(filename).c_str(), sizeof(buffers->userinfo));
 
 	uint32_t args[] = {
-		wasm.userinfo_ptr
+		WASM_BUFFERS_OFFSET(filename)
 	};
 
 	wasm_call(wasm.WASM_ReadGame, args);
+
+	wasm_fetch_edict_base();
 
 	post_sync_entities();
 }
@@ -492,10 +522,12 @@ static void WriteLevel(const char *filename)
 		}
 	}
 
-	strlcpy(wasm.userinfo_buf, get_relative_file(filename).c_str(), MAX_INFO_STRING);
+	wasm_buffers_t *buffers = wasm_buffers();
+
+	strlcpy(buffers->filename, get_relative_file(filename).c_str(), sizeof(buffers->filename));
 
 	uint32_t args[] = {
-		wasm.userinfo_ptr
+		WASM_BUFFERS_OFFSET(filename)
 	};
 
 	wasm_call(wasm.WASM_WriteLevel, args);
@@ -512,10 +544,12 @@ static void WriteLevel(const char *filename)
 
 static void ReadLevel(const char *filename)
 {
-	strlcpy(wasm.userinfo_buf, get_relative_file(filename).c_str(), MAX_INFO_STRING);
+	wasm_buffers_t *buffers = wasm_buffers();
+
+	strlcpy(buffers->filename, get_relative_file(filename).c_str(), sizeof(buffers->filename));
 
 	uint32_t args[] = {
-		wasm.userinfo_ptr
+		WASM_BUFFERS_OFFSET(filename)
 	};
 
 	wasm_call(wasm.WASM_ReadLevel, args);

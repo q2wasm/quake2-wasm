@@ -113,6 +113,7 @@ struct gclient_s
 {
 	player_state_t	ps;
 	int32_t			ping;
+	int32_t			clientNum;
 };
 
 enum { MAX_INFO_STRING = 512 };
