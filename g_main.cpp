@@ -272,6 +272,9 @@ static void ShutdownGame(void)
 	if (wasm.module_inst)
 		wasm_runtime_deinstantiate(wasm.module_inst);
 
+	if (wasm.wasm_module)
+		wasm_runtime_unload(wasm.wasm_module);
+
 	wasm_runtime_destroy();
 
 	gi.FreeTags(TAG_GAME);

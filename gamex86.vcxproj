@@ -232,7 +232,7 @@
     <Link>
       <ModuleDefinitionFile>game.def</ModuleDefinitionFile>
       <GenerateDebugInformation>DebugFull</GenerateDebugInformation>
-      <AdditionalDependencies>vmlib.lib;uv_a.lib;Ws2_32.lib;psapi.lib;Iphlpapi.lib;Userenv.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>vmlib.lib;uv_a.lib;psapi.lib;Iphlpapi.lib;Userenv.lib;Ws2_32.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers>
     </Link>
   </ItemDefinitionGroup>
