@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../game/api.h"
+#include "../game/g_api.h"
 
 typedef uint32_t entity_effects_t;
 

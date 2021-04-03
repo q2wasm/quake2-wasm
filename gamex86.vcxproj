@@ -125,39 +125,39 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Vanilla Debug|Win32'">
-    <OutDir>$(SolutionDir)..\</OutDir>
+    <OutDir>$(SolutionDir)bin\</OutDir>
     <CodeAnalysisRuleSet>MixedMinimumRules.ruleset</CodeAnalysisRuleSet>
     <IncludePath>../wasm-micro-runtime/core/iwasm/include/;$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
     <TargetName>$(ProjectName)86</TargetName>
     <IntDir>obj\$(Configuration)\</IntDir>
-    <LibraryPath>../wasm-micro-runtime/product-mini/platforms/windows/build/Debug/;$(VC_LibraryPath_x86);$(WindowsSDK_LibraryPath_x86);../wasm-micro-runtime/product-mini/platforms/windows/build/_deps/libuv-build/Debug</LibraryPath>
+    <LibraryPath>../wasm-micro-runtime/product-mini/platforms/windows/build/Debug/;../wasm-micro-runtime/product-mini/platforms/windows/build/_deps/libuv-build/Debug;$(VC_LibraryPath_x86);$(WindowsSDK_LibraryPath_x86)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Vanilla Debug|x64'">
     <CodeAnalysisRuleSet>MixedMinimumRules.ruleset</CodeAnalysisRuleSet>
     <IncludePath>../wasm-micro-runtime/core/iwasm/include/;$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
     <TargetName>$(ProjectName)86_x64</TargetName>
-    <OutDir>$(SolutionDir)..\</OutDir>
+    <OutDir>$(SolutionDir)bin\</OutDir>
     <IntDir>obj\$(Platform)\$(Configuration)\</IntDir>
     <LibraryPath>../wasm-micro-runtime/product-mini/platforms/windows/build/Debug/;$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='KMQuake2 Debug|Win32'">
-    <OutDir>$(SolutionDir)..\</OutDir>
+    <OutDir>$(SolutionDir)bin\</OutDir>
     <CodeAnalysisRuleSet>MixedMinimumRules.ruleset</CodeAnalysisRuleSet>
     <IncludePath>../wasm-micro-runtime/core/iwasm/include/;$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
     <TargetName>kmq2$(ProjectName)86</TargetName>
     <IntDir>obj\$(Configuration)\</IntDir>
-    <LibraryPath>../wasm-micro-runtime/product-mini/platforms/windows/build/Release/;$(VC_LibraryPath_x86);$(WindowsSDK_LibraryPath_x86)</LibraryPath>
+    <LibraryPath>../wasm-micro-runtime/product-mini/platforms/windows/build/Debug/;../wasm-micro-runtime/product-mini/platforms/windows/build/_deps/libuv-build/Debug;$(VC_LibraryPath_x86);$(WindowsSDK_LibraryPath_x86)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='KMQuake2 Debug|x64'">
     <CodeAnalysisRuleSet>MixedMinimumRules.ruleset</CodeAnalysisRuleSet>
     <IncludePath>../wasm-micro-runtime/core/iwasm/include/;$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
     <TargetName>kmq2$(ProjectName)64</TargetName>
-    <OutDir>$(SolutionDir)..\</OutDir>
+    <OutDir>$(SolutionDir)bin\</OutDir>
     <IntDir>obj\$(Platform)\$(Configuration)\</IntDir>
     <LibraryPath>../wasm-micro-runtime/product-mini/platforms/windows/build/Release/;$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Vanilla Release|Win32'">
-    <OutDir>$(SolutionDir)..\</OutDir>
+    <OutDir>$(SolutionDir)bin\</OutDir>
     <CodeAnalysisRuleSet>MixedMinimumRules.ruleset</CodeAnalysisRuleSet>
     <IncludePath>../wasm-micro-runtime/core/iwasm/include/;$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
     <TargetName>$(ProjectName)86</TargetName>
@@ -168,23 +168,23 @@
     <CodeAnalysisRuleSet>MixedMinimumRules.ruleset</CodeAnalysisRuleSet>
     <IncludePath>../wasm-micro-runtime/core/iwasm/include/;$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
     <TargetName>$(ProjectName)86_x64</TargetName>
-    <OutDir>$(SolutionDir)..\</OutDir>
+    <OutDir>$(SolutionDir)bin\</OutDir>
     <IntDir>obj\$(Platform)\$(Configuration)\</IntDir>
     <LibraryPath>../wasm-micro-runtime/product-mini/platforms/windows/build/Release/;$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='KMQuake2 Release|Win32'">
-    <OutDir>$(SolutionDir)..\</OutDir>
+    <OutDir>$(SolutionDir)bin\</OutDir>
     <CodeAnalysisRuleSet>MixedMinimumRules.ruleset</CodeAnalysisRuleSet>
     <IncludePath>../wasm-micro-runtime/core/iwasm/include/;$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
     <TargetName>kmq2$(ProjectName)86</TargetName>
     <IntDir>obj\$(Configuration)\</IntDir>
-    <LibraryPath>../wasm-micro-runtime/product-mini/platforms/windows/build/Release/;$(VC_LibraryPath_x86);$(WindowsSDK_LibraryPath_x86)</LibraryPath>
+    <LibraryPath>../wasm-micro-runtime/product-mini/platforms/windows/build/_deps/libuv-build/Release;../wasm-micro-runtime/product-mini/platforms/windows/build/Release/;$(VC_LibraryPath_x86);$(WindowsSDK_LibraryPath_x86)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='KMQuake2 Release|x64'">
     <CodeAnalysisRuleSet>MixedMinimumRules.ruleset</CodeAnalysisRuleSet>
     <IncludePath>../wasm-micro-runtime/core/iwasm/include/;$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
     <TargetName>kmq2$(ProjectName)64</TargetName>
-    <OutDir>$(SolutionDir)..\</OutDir>
+    <OutDir>$(SolutionDir)bin\</OutDir>
     <IntDir>obj\$(Platform)\$(Configuration)\</IntDir>
     <LibraryPath>../wasm-micro-runtime/product-mini/platforms/windows/build/Release/;$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64)</LibraryPath>
   </PropertyGroup>
@@ -232,7 +232,7 @@
     <Link>
       <ModuleDefinitionFile>game.def</ModuleDefinitionFile>
       <GenerateDebugInformation>DebugFull</GenerateDebugInformation>
-      <AdditionalDependencies>vmlib.lib;uv_a.lib;psapi.lib;Iphlpapi.lib;Userenv.lib;Ws2_32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>vmlib.lib;uv_a.lib;psapi.lib;Iphlpapi.lib;Userenv.lib;Ws2_32.lib;uv_a.lib;psapi.lib;Iphlpapi.lib;Userenv.lib;Ws2_32.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers>
     </Link>
   </ItemDefinitionGroup>
@@ -256,7 +256,7 @@
     <Link>
       <ModuleDefinitionFile>game.def</ModuleDefinitionFile>
       <GenerateDebugInformation>DebugFull</GenerateDebugInformation>
-      <AdditionalDependencies>vmlib.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>vmlib.lib;uv_a.lib;psapi.lib;Iphlpapi.lib;Userenv.lib;Ws2_32.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers>
     </Link>
   </ItemDefinitionGroup>
@@ -280,7 +280,7 @@
     <Link>
       <ModuleDefinitionFile>game.def</ModuleDefinitionFile>
       <GenerateDebugInformation>DebugFull</GenerateDebugInformation>
-      <AdditionalDependencies>vmlib.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>vmlib.lib;uv_a.lib;psapi.lib;Iphlpapi.lib;Userenv.lib;Ws2_32.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers>
     </Link>
   </ItemDefinitionGroup>
@@ -304,7 +304,7 @@
     <Link>
       <ModuleDefinitionFile>game.def</ModuleDefinitionFile>
       <GenerateDebugInformation>DebugFull</GenerateDebugInformation>
-      <AdditionalDependencies>vmlib.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>vmlib.lib;uv_a.lib;psapi.lib;Iphlpapi.lib;Userenv.lib;Ws2_32.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers>
     </Link>
   </ItemDefinitionGroup>
@@ -330,7 +330,7 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <ModuleDefinitionFile>game.def</ModuleDefinitionFile>
-      <AdditionalDependencies>vmlib.lib;uv_a.lib;Ws2_32.lib;psapi.lib;Iphlpapi.lib;Userenv.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>vmlib.lib;uv_a.lib;psapi.lib;Iphlpapi.lib;Userenv.lib;Ws2_32.lib;uv_a.lib;Ws2_32.lib;psapi.lib;Iphlpapi.lib;Userenv.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers>
       <GenerateDebugInformation>DebugFull</GenerateDebugInformation>
     </Link>
@@ -357,7 +357,7 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <ModuleDefinitionFile>game.def</ModuleDefinitionFile>
-      <AdditionalDependencies>vmlib.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>vmlib.lib;uv_a.lib;psapi.lib;Iphlpapi.lib;Userenv.lib;Ws2_32.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers>
     </Link>
   </ItemDefinitionGroup>
@@ -383,7 +383,7 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <ModuleDefinitionFile>game.def</ModuleDefinitionFile>
-      <AdditionalDependencies>vmlib.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>vmlib.lib;uv_a.lib;psapi.lib;Iphlpapi.lib;Userenv.lib;Ws2_32.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers>
     </Link>
   </ItemDefinitionGroup>
@@ -409,7 +409,7 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <ModuleDefinitionFile>game.def</ModuleDefinitionFile>
-      <AdditionalDependencies>vmlib.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>vmlib.lib;uv_a.lib;psapi.lib;Iphlpapi.lib;Userenv.lib;Ws2_32.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers>
     </Link>
   </ItemDefinitionGroup>
@@ -417,15 +417,14 @@
     <None Include="game.def" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="game\wasm.c" />
-    <ClCompile Include="g_main.cpp" />
-    <ClCompile Include="g_wasm_api.cpp" />
+    <ClCompile Include="game\g_wasm.c" />
+    <ClCompile Include="g_main.c" />
+    <ClCompile Include="g_wasm_api.c" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="game\api.h" />
+    <ClInclude Include="game\g_api.h" />
     <ClInclude Include="g_main.h" />
     <ClInclude Include="g_wasm.h" />
-    <ClInclude Include="g_wasm.hh" />
     <ClInclude Include="shared\client.h" />
     <ClInclude Include="shared\entity.h" />
   </ItemGroup>

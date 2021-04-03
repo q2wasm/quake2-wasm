@@ -408,3 +408,9 @@ typedef struct
 	int32_t		num_edicts;	// current number, <= max_edicts
 	int32_t		max_edicts;
 } game_export_t;
+
+// Extended Game API
+#define GAME_API_EXTENDED_VERSION    87
+
+typedef qboolean game_capability_t;
+#define CAPABILITY_FALSE false

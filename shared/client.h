@@ -18,7 +18,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 #pragma once
 
-#include "../game/api.h"
+#include "../game/g_api.h"
 
 // player_state_t->refdef flags
 typedef enum
@@ -56,6 +56,8 @@ enum
 	STAT_CHASE,
 	STAT_SPECTATOR,
 	// Bits from here to 31 are free for mods
+
+	MAX_VANILLA_STATS = 32,
 
 #ifdef KMQUAKE2_ENGINE_MOD
 	MAX_STATS	= 256

@@ -18,13 +18,13 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="g_main.cpp">
+    <ClCompile Include="g_main.c">
       <Filter>src</Filter>
     </ClCompile>
-    <ClCompile Include="g_wasm_api.cpp">
+    <ClCompile Include="g_wasm_api.c">
       <Filter>src</Filter>
     </ClCompile>
-    <ClCompile Include="game\wasm.c">
+    <ClCompile Include="game\g_wasm.c">
       <Filter>inc\game</Filter>
     </ClCompile>
   </ItemGroup>
@@ -41,10 +41,7 @@
     <ClInclude Include="g_wasm.h">
       <Filter>inc</Filter>
     </ClInclude>
-    <ClInclude Include="g_wasm.hh">
-      <Filter>inc</Filter>
-    </ClInclude>
-    <ClInclude Include="game\api.h">
+    <ClInclude Include="game\g_api.h">
       <Filter>inc\game</Filter>
     </ClInclude>
   </ItemGroup>
